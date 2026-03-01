@@ -1,11 +1,11 @@
-const jwt = require('jsonwebtoken');
 const User = require('../models/user');
-const { validationResult } = require('express-validator');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 // Generate JWT Token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET || 'your-secret-key', {
-    expiresIn: '30d',
+    expiresIn: process.env.JWT_EXPIRES_IN || '30d'
   });
 };
 
@@ -14,33 +14,15 @@ const generateToken = (id) => {
 // @access  Public
 exports.register = async (req, res, next) => {
   try {
-    // Check validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const { email, password, name, role, studentId, lecturerId, department, semester } = req.body;
+    const { email, password, name, role, studentId, employeeId, department } = req.body;
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
-
-    // Check if student/lecturer ID is unique
-    if (role === 'student' && studentId) {
-      const existingStudent = await User.findOne({ studentId });
-      if (existingStudent) {
-        return res.status(400).json({ message: 'Student ID already exists' });
-      }
-    }
-
-    if (role === 'lecturer' && lecturerId) {
-      const existingLecturer = await User.findOne({ lecturerId });
-      if (existingLecturer) {
-        return res.status(400).json({ message: 'Lecturer ID already exists' });
-      }
+      return res.status(400).json({ 
+        success: false, 
+        message: 'User already exists' 
+      });
     }
 
     // Create user
@@ -48,11 +30,10 @@ exports.register = async (req, res, next) => {
       name,
       email,
       password,
-      role,
+      role: role || 'student',
       studentId: role === 'student' ? studentId : undefined,
-      lecturerId: role === 'lecturer' ? lecturerId : undefined,
-      department,
-      semester: role === 'student' ? semester : undefined,
+      employeeId: role !== 'student' ? employeeId : undefined,
+      department
     });
 
     // Generate token
@@ -61,7 +42,7 @@ exports.register = async (req, res, next) => {
     res.status(201).json({
       success: true,
       token,
-      user,
+      user
     });
   } catch (error) {
     next(error);
@@ -73,33 +54,37 @@ exports.register = async (req, res, next) => {
 // @access  Public
 exports.login = async (req, res, next) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
     const { email, password } = req.body;
 
     // Check for user
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid credentials' 
+      });
     }
 
     // Check if user is active
     if (!user.isActive) {
-      return res.status(401).json({ message: 'Your account has been deactivated' });
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Your account has been deactivated' 
+      });
     }
 
     // Check password
     const isPasswordMatch = await user.comparePassword(password);
     if (!isPasswordMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid credentials' 
+      });
     }
 
     // Update last login
     user.lastLogin = Date.now();
-    await user.save({ validateBeforeSave: false });
+    await user.save();
 
     // Generate token
     const token = generateToken(user._id);
@@ -107,7 +92,15 @@ exports.login = async (req, res, next) => {
     res.json({
       success: true,
       token,
-      user,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        department: user.department,
+        faculty: user.faculty,
+        profilePicture: user.profilePicture
+      }
     });
   } catch (error) {
     next(error);
@@ -119,10 +112,98 @@ exports.login = async (req, res, next) => {
 // @access  Private
 exports.getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id)
+      .populate('department', 'name code')
+      .populate('faculty', 'name code');
+      
     res.json({
       success: true,
-      user,
+      user
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Logout user
+// @route   POST /api/auth/logout
+// @access  Private
+exports.logout = async (req, res, next) => {
+  try {
+    res.json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Forgot password
+// @route   POST /api/auth/forgot-password
+// @access  Public
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+    
+    // Generate reset token
+    const resetToken = user.createPasswordResetToken();
+    await user.save({ validateBeforeSave: false });
+    
+    // In production, send email here
+    // For now, return token (remove in production)
+    res.json({
+      success: true,
+      message: 'Password reset email sent',
+      resetToken
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Reset password
+// @route   PUT /api/auth/reset-password/:resetToken
+// @access  Public
+exports.resetPassword = async (req, res, next) => {
+  try {
+    const resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(req.params.resetToken)
+      .digest('hex');
+    
+    const user = await User.findOne({
+      passwordResetToken: resetPasswordToken,
+      passwordResetExpires: { $gt: Date.now() }
+    });
+    
+    if (!user) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid or expired token' 
+      });
+    }
+    
+    user.password = req.body.password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+    
+    const token = generateToken(user._id);
+    
+    res.json({
+      success: true,
+      message: 'Password reset successful',
+      token
     });
   } catch (error) {
     next(error);
@@ -138,21 +219,64 @@ exports.updatePassword = async (req, res, next) => {
 
     const user = await User.findById(req.user.id).select('+password');
 
-    // Check current password
     const isMatch = await user.comparePassword(currentPassword);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Current password is incorrect' });
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Current password is incorrect' 
+      });
     }
 
-    // Update password
     user.password = newPassword;
     await user.save();
+
+    const token = generateToken(user._id);
 
     res.json({
       success: true,
       message: 'Password updated successfully',
+      token
     });
   } catch (error) {
     next(error);
+  }
+};
+
+// @desc    Refresh token
+// @route   POST /api/auth/refresh-token
+// @access  Public
+exports.refreshToken = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No token provided' 
+      });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    
+    const user = await User.findById(decoded.id);
+    
+    if (!user || !user.isActive) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'User not found or inactive' 
+      });
+    }
+
+    const newToken = generateToken(user._id);
+
+    res.json({
+      success: true,
+      token: newToken
+    });
+  } catch (error) {
+    res.status(401).json({ 
+      success: false, 
+      message: 'Invalid or expired token' 
+    });
   }
 };

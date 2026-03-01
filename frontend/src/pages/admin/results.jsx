@@ -6,7 +6,8 @@ import {
   FiAward, FiPlus, FiEdit2, FiTrash2, FiSearch, FiUser, FiDownload, FiFilter,
   FiBarChart2, FiPrinter, FiDownload as FiDownloadIcon, FiTrendingUp,
   FiPieChart, FiStar, FiClock, FiCheckCircle, FiXCircle, FiUsers,
-  FiBookmark, FiGrid, FiLayers, FiCalendar, FiClock as FiTimeIcon
+  FiBookmark, FiGrid, FiLayers, FiCalendar, FiClock as FiTimeIcon,
+  FiChevronDown
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
@@ -16,6 +17,140 @@ const gradePoints = {
   'C+': 2.3, 'C': 2.0, 'C-': 1.7,
   'D+': 1.3, 'D': 1.0, 'E': 0.7,
   'F': 0.0
+};
+
+// Subject data for auto-fill based on curriculum
+const subjectOptions = {
+  'Computer Science': {
+    '1st Year': {
+      1: [
+        { code: 'CO1121', name: 'Basic Mathematics for Computing', credits: 3, category: 'Lecture' },
+        { code: 'CO1122', name: 'Basic Computer Programming', credits: 3, category: 'Lecture' },
+        { code: 'CO1112', name: 'Practical work on CO1122', credits: 1, category: 'Practical' },
+        { code: 'CO1123', name: 'Formal Methods for Problem Solving', credits: 3, category: 'Lecture' },
+        { code: 'CO1124', name: 'Computer Systems & PC Applications', credits: 3, category: 'Lecture' },
+        { code: 'CO1114', name: 'Practical work on CO1124', credits: 1, category: 'Practical' },
+        { code: 'CO1125', name: 'Statistics for Science and Technology', credits: 3, category: 'Lecture' },
+        { code: 'CO1115', name: 'Practical work on CO1125', credits: 1, category: 'Practical' },
+        { code: 'CO1126', name: 'Management Information System', credits: 3, category: 'Management' },
+        { code: 'GEP-I', name: 'General English Proficiency - I', credits: 2, category: 'General' },
+      ],
+      2: [
+        { code: 'CO1221', name: 'Systems Analysis & Design', credits: 3, category: 'Lecture' },
+        { code: 'CO1222', name: 'Data Structures & Algorithms', credits: 3, category: 'Lecture' },
+        { code: 'CO1212', name: 'Practical work on CO1222', credits: 1, category: 'Practical' },
+        { code: 'CO1223', name: 'Data Base Management Systems', credits: 3, category: 'Lecture' },
+        { code: 'CO1213', name: 'Practical work on CO1223', credits: 1, category: 'Practical' },
+        { code: 'CO1224', name: 'MultiMedia & HyperMedia Development', credits: 3, category: 'Lecture' },
+        { code: 'CO1214', name: 'Practical work on CO1224', credits: 1, category: 'Practical' },
+        { code: 'CO1225', name: 'Computer Architecture', credits: 3, category: 'Lecture' },
+        { code: 'CO1226', name: 'Social Harmony', credits: 2, category: 'General' },
+      ]
+    },
+    '2nd Year': {
+      1: [
+        { code: 'CO2121', name: 'Advanced Mathematics for Computing', credits: 3, category: 'Lecture' },
+        { code: 'CO2122', name: 'Operating Systems', credits: 3, category: 'Lecture' },
+        { code: 'CO2112', name: 'Practical work on CO2122', credits: 1, category: 'Practical' },
+        { code: 'CO2123', name: 'Software Engineering', credits: 3, category: 'Lecture' },
+        { code: 'CO2124', name: 'Internet and Web Design', credits: 3, category: 'Lecture' },
+        { code: 'CO2114', name: 'Practical work on CO2124', credits: 1, category: 'Practical' },
+        { code: 'CO2125', name: 'Object Oriented Programming', credits: 3, category: 'Lecture' },
+        { code: 'CO2115', name: 'Practical work on CO2125', credits: 1, category: 'Practical' },
+        { code: 'CO2126', name: 'Sri Lankan Studies', credits: 2, category: 'General' },
+        { code: 'GEP-III', name: 'General English Proficiency - III', credits: 2, category: 'General' },
+      ],
+      2: [
+        { code: 'CO2221', name: 'Data Communication Systems', credits: 3, category: 'Lecture' },
+        { code: 'CO2222', name: 'Visual System Development Tools', credits: 3, category: 'Lecture' },
+        { code: 'CO2212', name: 'Practical work on CO2222', credits: 1, category: 'Practical' },
+        { code: 'CO2223', name: 'Computer Graphics', credits: 3, category: 'Lecture' },
+        { code: 'CO2213', name: 'Practical work on CO2223', credits: 1, category: 'Practical' },
+        { code: 'CO2224', name: 'Human Computer Interaction', credits: 3, category: 'Lecture' },
+        { code: 'CO2214', name: 'Practical work on CO2224', credits: 1, category: 'Practical' },
+        { code: 'CO2225', name: 'Software Management Techniques', credits: 3, category: 'Management' },
+        { code: 'CO2226', name: 'Automata Theory', credits: 3, category: 'Lecture' },
+      ]
+    },
+    '3rd Year': {
+      1: [
+        { code: 'CS3121', name: 'Logic Programming & Expert Systems', credits: 3, category: 'Lecture' },
+        { code: 'CS3111', name: 'Practical work on CS3121', credits: 1, category: 'Practical' },
+        { code: 'CS3122', name: 'Advanced Database Management Systems', credits: 3, category: 'Lecture' },
+        { code: 'CS3112', name: 'Practical work on CS3122', credits: 1, category: 'Practical' },
+        { code: 'CS3123', name: 'Systems & Network Administration', credits: 3, category: 'Lecture' },
+        { code: 'CS3113', name: 'Practical work on CS3123', credits: 1, category: 'Practical' },
+        { code: 'CS3124', name: 'Data Security', credits: 3, category: 'Lecture' },
+        { code: 'CS3114', name: 'Practical work on CS3124', credits: 1, category: 'Practical' },
+        { code: 'CS3135', name: 'Theory of Computing', credits: 3, category: 'Lecture' },
+        { code: 'EC3101', name: 'Foundations of Management', credits: 3, category: 'Management' },
+      ],
+      2: [
+        { code: 'CS3221', name: 'Assembly Programming', credits: 3, category: 'Lecture' },
+        { code: 'CS3211', name: 'Practical work on CS3221', credits: 1, category: 'Practical' },
+        { code: 'CS3222', name: 'Software Quality Assurance', credits: 3, category: 'Lecture' },
+        { code: 'CS3212', name: 'Practical work on CS3222', credits: 1, category: 'Practical' },
+        { code: 'CS3233', name: 'Professional Issues in IT', credits: 3, category: 'Lecture' },
+        { code: 'CS3224', name: 'Computer Networks', credits: 3, category: 'Lecture' },
+        { code: 'CS3214', name: 'Practical work on CS3222', credits: 1, category: 'Practical' },
+        { code: 'CS3235', name: 'Industrial Training/Project', credits: 6, category: 'Project' },
+      ]
+    },
+    '4th Year': {
+      1: [
+        { code: 'CS4121', name: 'Advanced Computer Architecture', credits: 3, category: 'Lecture' },
+        { code: 'CS4122', name: 'Machine Learning', credits: 3, category: 'Lecture' },
+        { code: 'CS4112', name: 'Practical work on CS4122', credits: 1, category: 'Practical' },
+        { code: 'CS4123', name: 'Distributed Systems', credits: 3, category: 'Lecture' },
+        { code: 'CS4124', name: 'Research Methodology', credits: 3, category: 'Lecture' },
+        { code: 'CS41P1', name: 'Research Project - Part I', credits: 3, category: 'Project' },
+      ],
+      2: [
+        { code: 'CS4221', name: 'Advanced Networking', credits: 3, category: 'Lecture' },
+        { code: 'CS4222', name: 'Cloud Computing', credits: 3, category: 'Lecture' },
+        { code: 'CS4223', name: 'Ethical Hacking', credits: 3, category: 'Lecture' },
+        { code: 'CS4213', name: 'Practical work on CS4223', credits: 1, category: 'Practical' },
+        { code: 'CS42P2', name: 'Research Project - Part II', credits: 6, category: 'Project' },
+      ]
+    }
+  },
+  'Software Engineering': {
+    '1st Year': {
+      1: [
+        { code: 'SE1101', name: 'Fundamentals of Programming', credits: 3, category: 'Lecture' },
+        { code: 'SE1101P', name: 'Programming Lab', credits: 1, category: 'Practical' },
+        { code: 'SE1102', name: 'Mathematics for Computing', credits: 3, category: 'Lecture' },
+        { code: 'SE1103', name: 'Digital Logic Design', credits: 3, category: 'Lecture' },
+        { code: 'SE1104', name: 'Communication Skills', credits: 2, category: 'General' },
+        { code: 'SE1105', name: 'Introduction to Software Engineering', credits: 3, category: 'Lecture' },
+      ],
+      2: [
+        { code: 'SE1201', name: 'Object Oriented Programming', credits: 3, category: 'Lecture' },
+        { code: 'SE1201P', name: 'OOP Lab', credits: 1, category: 'Practical' },
+        { code: 'SE1202', name: 'Data Structures', credits: 3, category: 'Lecture' },
+        { code: 'SE1202P', name: 'Data Structures Lab', credits: 1, category: 'Practical' },
+        { code: 'SE1203', name: 'Database Systems', credits: 3, category: 'Lecture' },
+        { code: 'SE1204', name: 'Web Development Basics', credits: 3, category: 'Lecture' },
+      ]
+    }
+  },
+  'Information Technology': {
+    '1st Year': {
+      1: [
+        { code: 'IT1101', name: 'Introduction to IT', credits: 3, category: 'Lecture' },
+        { code: 'IT1102', name: 'Programming Fundamentals', credits: 3, category: 'Lecture' },
+        { code: 'IT1102P', name: 'Programming Lab', credits: 1, category: 'Practical' },
+        { code: 'IT1103', name: 'Mathematics for IT', credits: 3, category: 'Lecture' },
+        { code: 'IT1104', name: 'Digital Literacy', credits: 2, category: 'General' },
+      ],
+      2: [
+        { code: 'IT1201', name: 'Web Technologies', credits: 3, category: 'Lecture' },
+        { code: 'IT1201P', name: 'Web Lab', credits: 1, category: 'Practical' },
+        { code: 'IT1202', name: 'Database Management', credits: 3, category: 'Lecture' },
+        { code: 'IT1203', name: 'Computer Networks Basics', credits: 3, category: 'Lecture' },
+      ]
+    }
+  }
 };
 
 const AdminResults = ({ sidebarOpen }) => {
@@ -46,6 +181,7 @@ const AdminResults = ({ sidebarOpen }) => {
   const [studentAnalysis, setStudentAnalysis] = useState(null);
   const [departmentStats, setDepartmentStats] = useState(null);
   const [yearlyStats, setYearlyStats] = useState(null);
+  const [availableSubjects, setAvailableSubjects] = useState([]);
   const [formData, setFormData] = useState({
     student: '', subject: '', year: '', semester: '', examType: 'final', marks: ''
   });
@@ -144,6 +280,59 @@ const AdminResults = ({ sidebarOpen }) => {
     }
     
     setFilteredResults(filtered);
+  };
+
+  // Update available subjects when year, semester, or student changes
+  useEffect(() => {
+    if (formData.year && formData.semester && formData.student) {
+      // Find the selected student's department
+      const selectedStudentObj = students.find(s => s._id === formData.student);
+      if (selectedStudentObj?.department) {
+        const deptSubjects = subjectOptions[selectedStudentObj.department]?.[formData.year]?.[formData.semester] || [];
+        setAvailableSubjects(deptSubjects);
+      } else {
+        setAvailableSubjects([]);
+      }
+    } else {
+      setAvailableSubjects([]);
+    }
+  }, [formData.year, formData.semester, formData.student, students]);
+
+  // Handle subject selection from dropdown
+  const handleSubjectSelect = (e) => {
+    const selectedSubjectId = e.target.value;
+    if (!selectedSubjectId) return;
+    
+    // Find the selected subject from available subjects
+    const selected = availableSubjects.find(sub => sub._id === selectedSubjectId);
+    if (selected) {
+      setFormData({
+        ...formData,
+        subject: selected._id,
+      });
+    }
+  };
+
+  // Handle subject selection from curriculum dropdown
+  const handleCurriculumSubjectSelect = (e) => {
+    const selectedCode = e.target.value;
+    if (!selectedCode) return;
+    
+    // Find the selected subject from available subjects
+    const selected = availableSubjects.find(sub => sub.code === selectedCode);
+    if (selected) {
+      // Find the corresponding subject in the subjects list from API
+      const subjectFromAPI = subjects.find(s => s.code === selected.code);
+      if (subjectFromAPI) {
+        setFormData({
+          ...formData,
+          subject: subjectFromAPI._id,
+        });
+        toast.success(`Selected: ${selected.name}`);
+      } else {
+        toast.error('This subject is not available in the system. Please add it first.');
+      }
+    }
   };
 
   const resetForm = () => setFormData({ 
@@ -1203,7 +1392,7 @@ const AdminResults = ({ sidebarOpen }) => {
       <Modal isOpen={showAddModal} onClose={() => { setShowAddModal(false); resetForm(); }} title="Add Result" size="lg">
         <form onSubmit={handleAddResult} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">Student</label>
               <select 
                 name="student" 
@@ -1220,19 +1409,7 @@ const AdminResults = ({ sidebarOpen }) => {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-              <select 
-                name="subject" 
-                value={formData.subject} 
-                onChange={handleInputChange} 
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="">Choose a subject</option>
-                {subjects.map(s => <option key={s._id} value={s._id}>{s.name} ({s.code})</option>)}
-              </select>
-            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Academic Year</label>
               <select 
@@ -1246,6 +1423,7 @@ const AdminResults = ({ sidebarOpen }) => {
                 {academicYears.map(year => <option key={year} value={year}>{year}</option>)}
               </select>
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Semester</label>
               <select 
@@ -1259,6 +1437,67 @@ const AdminResults = ({ sidebarOpen }) => {
                 {semesters.map(s => <option key={s} value={s}>Semester {s}</option>)}
               </select>
             </div>
+
+            {/* Curriculum Subject Selection */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select from Curriculum <span className="text-gray-500 text-xs">(Optional - Auto-fills subject)</span>
+              </label>
+              <div className="relative">
+                <select
+                  onChange={handleCurriculumSubjectSelect}
+                  value=""
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 appearance-none"
+                  disabled={!formData.student || !formData.year || !formData.semester}
+                >
+                  <option value="">
+                    {!formData.student 
+                      ? 'Select a student first' 
+                      : !formData.year || !formData.semester 
+                      ? 'Select year and semester first' 
+                      : availableSubjects.length === 0 
+                      ? 'No subjects available for this selection'
+                      : '-- Choose a subject from curriculum --'}
+                  </option>
+                  {availableSubjects.map(sub => (
+                    <option key={sub.code} value={sub.code}>
+                      {sub.code} - {sub.name} ({sub.credits} credits)
+                    </option>
+                  ))}
+                </select>
+                <FiChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Select a subject to automatically fill the subject field below
+              </p>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+              <select 
+                name="subject" 
+                value={formData.subject} 
+                onChange={handleInputChange} 
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">Choose a subject</option>
+                {subjects
+                  .filter(s => !formData.year || s.year === formData.year)
+                  .filter(s => !formData.semester || s.semester === parseInt(formData.semester))
+                  .map(s => (
+                    <option key={s._id} value={s._id}>
+                      {s.code} - {s.name} ({s.credits} credits) - {s.department}
+                    </option>
+                  ))}
+              </select>
+              {formData.subject && (
+                <p className="text-xs text-green-600 mt-1">
+                  ✓ Subject selected
+                </p>
+              )}
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Exam Type</label>
               <select 
@@ -1271,6 +1510,7 @@ const AdminResults = ({ sidebarOpen }) => {
                 {examTypes.map(e => <option key={e} value={e}>{e.charAt(0).toUpperCase() + e.slice(1)}</option>)}
               </select>
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Marks</label>
               <input 
@@ -1286,6 +1526,19 @@ const AdminResults = ({ sidebarOpen }) => {
               />
             </div>
           </div>
+
+          {/* Preview Grade */}
+          {formData.marks && (
+            <div className="bg-purple-50 p-3 rounded-lg">
+              <p className="text-sm text-purple-700">
+                Calculated Grade: <span className="font-bold">{calculateGradeStatus(formData.marks).grade}</span> - 
+                Status: <span className={`font-bold ${calculateGradeStatus(formData.marks).status === 'pass' ? 'text-green-600' : 'text-red-600'}`}>
+                  {calculateGradeStatus(formData.marks).status}
+                </span>
+              </p>
+            </div>
+          )}
+
           <div className="flex justify-end space-x-3 pt-4">
             <button 
               type="button" 
@@ -1308,7 +1561,7 @@ const AdminResults = ({ sidebarOpen }) => {
       <Modal isOpen={showEditModal} onClose={() => { setShowEditModal(false); setSelectedResult(null); resetForm(); }} title="Edit Result" size="lg">
         <form onSubmit={handleEditResult} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">Student</label>
               <select 
                 name="student" 
@@ -1325,19 +1578,7 @@ const AdminResults = ({ sidebarOpen }) => {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-              <select 
-                name="subject" 
-                value={formData.subject} 
-                onChange={handleInputChange} 
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="">Choose a subject</option>
-                {subjects.map(s => <option key={s._id} value={s._id}>{s.name} ({s.code})</option>)}
-              </select>
-            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Academic Year</label>
               <select 
@@ -1351,6 +1592,7 @@ const AdminResults = ({ sidebarOpen }) => {
                 {academicYears.map(year => <option key={year} value={year}>{year}</option>)}
               </select>
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Semester</label>
               <select 
@@ -1364,6 +1606,28 @@ const AdminResults = ({ sidebarOpen }) => {
                 {semesters.map(s => <option key={s} value={s}>Semester {s}</option>)}
               </select>
             </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+              <select 
+                name="subject" 
+                value={formData.subject} 
+                onChange={handleInputChange} 
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">Choose a subject</option>
+                {subjects
+                  .filter(s => !formData.year || s.year === formData.year)
+                  .filter(s => !formData.semester || s.semester === parseInt(formData.semester))
+                  .map(s => (
+                    <option key={s._id} value={s._id}>
+                      {s.code} - {s.name} ({s.credits} credits) - {s.department}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Exam Type</label>
               <select 
@@ -1376,6 +1640,7 @@ const AdminResults = ({ sidebarOpen }) => {
                 {examTypes.map(e => <option key={e} value={e}>{e.charAt(0).toUpperCase() + e.slice(1)}</option>)}
               </select>
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Marks</label>
               <input 
@@ -1391,6 +1656,19 @@ const AdminResults = ({ sidebarOpen }) => {
               />
             </div>
           </div>
+
+          {/* Preview Grade */}
+          {formData.marks && (
+            <div className="bg-purple-50 p-3 rounded-lg">
+              <p className="text-sm text-purple-700">
+                Calculated Grade: <span className="font-bold">{calculateGradeStatus(formData.marks).grade}</span> - 
+                Status: <span className={`font-bold ${calculateGradeStatus(formData.marks).status === 'pass' ? 'text-green-600' : 'text-red-600'}`}>
+                  {calculateGradeStatus(formData.marks).status}
+                </span>
+              </p>
+            </div>
+          )}
+
           <div className="flex justify-end space-x-3 pt-4">
             <button 
               type="button" 

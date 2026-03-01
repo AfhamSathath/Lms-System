@@ -1,44 +1,74 @@
 const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
+const { validateCourse } = require('../middleware/validation');
 const {
-  getSubjects,
-  getSubject,
-  createSubject,
-  updateSubject,
-  deleteSubject,
-  getSubjectsByYearAndSemester,
-  getSubjectsByYear,
-  getSubjectsByDepartment,
-  getSubjectsByCategory,
+  getCourses,
+  getCourse,
+  createCourse,
+  updateCourse,
+  deleteCourse,
+  getCoursesByDepartment,
+  getCoursesByLecturer,
   assignLecturer,
-  getSubjectStatsByYear,
-  seedSubjects,
-  getSubjectsByLecturer,
-  bulkCreateSubjects,
-} = require('../controllers/subjectcontroller');
+  removeLecturer,
+  updateCourseStatus,
+  getCourseEnrollments,
+  bulkCreateCourses,
+  getCourseStats,
+  getCourseTimetable
+} = courseController = require('../controllers/subjectcontroller');
 
 // All routes require authentication
 router.use(protect);
 
-// Public routes (authenticated users)
-router.get('/', getSubjects);
-router.get('/stats/by-year', authorize('admin'), getSubjectStatsByYear);
-router.get('/year/:year', getSubjectsByYear);
-router.get('/year/:year/semester/:semester', getSubjectsByYearAndSemester);
-router.get('/department/:department', getSubjectsByDepartment);
-router.get('/category/:category', getSubjectsByCategory);
-router.get('/lecturer/:lecturerId', authorize('admin'), getSubjectsByLecturer);
-router.get('/:id', getSubject);
+// Stats route - must come before /:id route
+router.get('/stats', getCourseStats);
 
-// Lecturer assignment
-router.put('/:id/assign-lecturer', authorize('admin'), assignLecturer);
+// Public routes (within auth)
+router.get('/', getCourses);
+router.get('/:id', getCourse);
+router.get('/department/:departmentId', getCoursesByDepartment);
+router.get('/lecturer/:lecturerId', getCoursesByLecturer);
+router.get('/:id/enrollments', getCourseEnrollments);
+router.get('/:id/timetable', getCourseTimetable);
 
-// Admin only routes
-router.post('/', authorize('admin'), createSubject);
-router.post('/bulk', authorize('admin'), bulkCreateSubjects);
-router.post('/seed', authorize('admin'), seedSubjects);
-router.put('/:id', authorize('admin'), updateSubject);
-router.delete('/:id', authorize('admin'), deleteSubject);
+// Protected routes
+router.post('/', 
+  authorize('admin', 'hod', 'dean'), 
+  validateCourse,
+  createCourse
+);
+
+router.post('/bulk', 
+  authorize('admin'), 
+  bulkCreateCourses
+);
+
+router.put('/:id', 
+  authorize('admin', 'hod', 'dean'), 
+  validateCourse,
+  updateCourse
+);
+
+router.put('/:id/assign-lecturer', 
+  authorize('admin', 'hod', 'dean'), 
+  assignLecturer
+);
+
+router.put('/:id/remove-lecturer/:lecturerId', 
+  authorize('admin', 'hod', 'dean'), 
+  removeLecturer
+);
+
+router.put('/:id/status', 
+  authorize('admin', 'hod', 'dean'), 
+  updateCourseStatus
+);
+
+router.delete('/:id', 
+  authorize('admin'), 
+  deleteCourse
+);
 
 module.exports = router;

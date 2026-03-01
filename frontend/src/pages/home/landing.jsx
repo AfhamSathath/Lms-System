@@ -37,7 +37,7 @@ const Landing = () => {
   ];
 
   const stats = [
-    
+
   ];
 
   return (
@@ -55,7 +55,7 @@ const Landing = () => {
               </span>
             </div>
             <div className="flex items-center space-x-4">
-             
+
               <Link
                 to="/login"
                 className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all duration-200 font-medium"
@@ -85,15 +85,15 @@ const Landing = () => {
                   <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                     Management System
                   </span>
-                </h1>
+                </h1><br></br>
                 <p className="mt-6 text-xl text-gray-600">
                   Streamline education with our comprehensive LMS platform. Connect students, lecturers, and administrators in one powerful ecosystem.
                 </p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4">
-                
-                
+
+
               </div>
 
               {/* Quick Stats */}
@@ -108,7 +108,20 @@ const Landing = () => {
             </div>
 
             {/* Right Illustration: student collage */}
-            
+            {/* Right Image */}
+            <div className="flex justify-center lg:justify-end">
+              <img
+                src="/uni.webp"   // change if your file name is different
+                alt="University Students"
+                className="w-72 lg:w-96 xl:w-[420px] 
+               rounded-3xl 
+               shadow-xl 
+               border border-gray-100
+               hover:scale-105 
+               transition-all duration-500"
+              />
+            </div>
+
           </div>
         </div>
       </section>
@@ -146,10 +159,10 @@ const Landing = () => {
         </div>
       </section>
 
-      
+
 
       {/* CTA Section */}
-      
+
       {/* Footer */}
       <footer className="bg-gray-900 text-gray-300 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
@@ -165,7 +178,7 @@ const Landing = () => {
                 Empowering education through technology.
               </p>
             </div>
-            
+
             <div>
               <h4 className="font-semibold text-white mb-4">Support</h4>
               <ul className="space-y-2 text-sm">

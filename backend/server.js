@@ -17,6 +17,9 @@ const resultRoutes = require('./routes/resultroutes');
 const fileRoutes = require('./routes/fileroutes');
 const notificationRoutes = require('./routes/notificationroutes');
 const timetableRoutes = require('./routes/timetableroutes');
+const facultyRoutes = require('./routes/facultyRoutes');
+const departmentRoutes = require('./routes/departmentRoutes');
+
 
 const app = express();
 
@@ -54,6 +57,8 @@ app.use('/results', resultRoutes);
 app.use('/files', fileRoutes);
 app.use('/notifications', notificationRoutes);
 app.use('/timetables', timetableRoutes);
+app.use('/faculties', facultyRoutes);
+app.use('/departments', departmentRoutes);
 
 // ================= 404 HANDLER =================
 app.use((req, res) => {

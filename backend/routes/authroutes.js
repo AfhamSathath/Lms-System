@@ -1,31 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const { body } = require('express-validator');
-const { 
-  register, 
-  login, 
-  getMe, 
-  updatePassword 
-} = require('../controllers/authcontroller');
 const { protect } = require('../middleware/auth');
+const{ User } = require('../models/user');
+const { validateUser } = require('../middleware/validation');
+const {
+  register,
+  login,
+  logout,
+  getMe,
+  forgotPassword,
+  resetPassword,
+  updatePassword
+} = authController = require('../controllers/authcontroller');
 
-// Validation rules
-const registerValidation = [
-  body('name').notEmpty().withMessage('Name is required'),
-  body('email').isEmail().withMessage('Please enter a valid email'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('role').isIn(['student', 'lecturer', 'admin']).withMessage('Invalid role'),
-];
-
-const loginValidation = [
-  body('email').isEmail().withMessage('Please enter a valid email'),
-  body('password').notEmpty().withMessage('Password is required'),
-];
-
-// Routes
-router.post('/register', registerValidation, register);
-router.post('/login', loginValidation, login);
+router.post('/register', validateUser, register);
+router.post('/login', login);
+router.get('/logout', logout);
 router.get('/me', protect, getMe);
+router.post('/forgot-password', forgotPassword);
+router.put('/reset-password/:resetToken', resetPassword);
 router.put('/update-password', protect, updatePassword);
 
 module.exports = router;

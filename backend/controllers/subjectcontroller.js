@@ -1,569 +1,1033 @@
-const Subject = require('../models/subject');
+const Course = require('../models/subject');
 const User = require('../models/user');
-const { getDepartmentSubjects, getAllSubjectsForSeeding } = require('../utils/subjectData');
+const Department = require('../models/Department');
+const Enrollment = require('../models/Enrollment');
+const Notification = require('../models/notification');
 
-const academicYears = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
-
-// @desc    Get all subjects
-// @route   GET /api/subjects
+// @desc    Get all courses
+// @route   GET /api/courses
 // @access  Private
-exports.getSubjects = async (req, res, next) => {
+exports.getCourses = async (req, res, next) => {
   try {
-    let query = { isActive: true };
+    const { 
+      department, 
+      faculty, 
+      level, 
+      semester,
+      academicYear,
+      lecturer,
+      status,
+      search,
+      page = 1,
+      limit = 10,
+      sortBy = '-createdAt'
+    } = req.query;
 
-    // Filter based on user role
-    if (req.user.role === 'student') {
-      // Students see subjects for their current year and semester
-      const yearMap = {
-        1: '1st Year',
-        2: '2nd Year',
-        3: '3rd Year',
-        4: '4th Year'
-      };
-      query.year = yearMap[req.user.currentYear] || '1st Year';
-      query.semester = req.user.currentSemester || 1;
+    let query = {};
+    const userRole = req.user.role;
+
+    // Role-based access control
+    if (userRole === 'hod') {
       query.department = req.user.department;
-    } else if (req.user.role === 'lecturer') {
-      query.lecturer = req.user.id;
+    } else if (userRole === 'dean') {
+      query.faculty = req.user.facultyManaged;
+    } else if (userRole === 'lecturer') {
+      query.lecturers = req.user._id;
+    } else if (userRole === 'student') {
+      // Students see active courses
+      query.isActive = true;
     }
 
-    const subjects = await Subject.find(query)
-      .populate('lecturer', 'name email lecturerId')
-      .sort({ year: 1, semester: 1, code: 1 });
+    // Apply filters
+    if (department) query.department = department;
+    if (faculty) query.faculty = faculty;
+    if (level) query.level = level;
+    if (semester) query.semester = parseInt(semester);
+    if (academicYear) query.academicYear = academicYear;
+    if (lecturer) query.lecturers = lecturer;
+    if (status) query.enrollmentStatus = status;
+    if (req.query.isActive !== undefined) query.isActive = req.query.isActive === 'true';
 
-    // Add virtual semester number
-    const subjectsWithSemNumber = subjects.map(sub => ({
-      ...sub.toObject(),
-      semesterNumber: sub.semesterNumber
-    }));
+    if (search) {
+      query.$or = [
+        { courseCode: { $regex: search, $options: 'i' } },
+        { courseName: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const courses = await Course.find(query)
+      .populate('department', 'name code')
+      .populate('faculty', 'name code')
+      .populate('coordinator', 'name email employeeId')
+      .populate('lecturers', 'name email employeeId')
+      .populate('prerequisites', 'courseCode courseName')
+      .sort(sortBy)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Course.countDocuments(query);
+
+    // Get enrollment counts for each course
+    const coursesWithStats = await Promise.all(
+      courses.map(async (course) => {
+        const enrolledCount = await Enrollment.countDocuments({
+          course: course._id,
+          enrollmentStatus: 'enrolled'
+        });
+        
+        const completedCount = await Enrollment.countDocuments({
+          course: course._id,
+          enrollmentStatus: 'completed'
+        });
+
+        return {
+          ...course.toJSON(),
+          enrolledStudents: enrolledCount,
+          completedStudents: completedCount,
+          availableSeats: course.maxStudents - enrolledCount
+        };
+      })
+    );
 
     res.json({
       success: true,
-      count: subjects.length,
-      subjects: subjectsWithSemNumber,
+      count: courses.length,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / parseInt(limit)),
+      courses: coursesWithStats
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Get single subject
-// @route   GET /api/subjects/:id
+// @desc    Get single course
+// @route   GET /api/courses/:id
 // @access  Private
-exports.getSubject = async (req, res, next) => {
+exports.getCourse = async (req, res, next) => {
   try {
-    const subject = await Subject.findById(req.params.id)
-      .populate('lecturer', 'name email lecturerId');
+    const course = await Course.findById(req.params.id)
+      .populate('department', 'name code faculty')
+      .populate('faculty', 'name code')
+      .populate('coordinator', 'name email employeeId')
+      .populate('lecturers', 'name email employeeId')
+      .populate('teachingAssistants', 'name email')
+      .populate('prerequisites', 'courseCode courseName credits level');
 
-    if (!subject) {
-      return res.status(404).json({ message: 'Subject not found' });
+    if (!course) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Course not found' 
+      });
     }
+
+    // Check access permissions
+    const userRole = req.user.role;
+    if (userRole === 'hod' && course.department?._id.toString() !== req.user.department?.toString()) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You can only view courses in your department.' 
+      });
+    }
+
+    if (userRole === 'dean' && course.faculty?._id.toString() !== req.user.facultyManaged?.toString()) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You can only view courses in your faculty.' 
+      });
+    }
+
+    if (userRole === 'student') {
+      // Check if student is enrolled
+      const isEnrolled = await Enrollment.exists({
+        student: req.user.id,
+        course: course._id,
+        enrollmentStatus: 'enrolled'
+      });
+      
+      if (!isEnrolled && !course.isActive) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Access denied. You are not enrolled in this course.' 
+        });
+      }
+    }
+
+    // Get enrollment statistics
+    const enrollments = await Enrollment.find({ course: course._id })
+      .populate('student', 'name studentId email')
+      .sort('-createdAt');
+
+    const stats = {
+      totalEnrollments: enrollments.length,
+      enrolled: enrollments.filter(e => e.enrollmentStatus === 'enrolled').length,
+      completed: enrollments.filter(e => e.enrollmentStatus === 'completed').length,
+      dropped: enrollments.filter(e => e.enrollmentStatus === 'dropped').length,
+      failed: enrollments.filter(e => e.enrollmentStatus === 'failed').length
+    };
 
     res.json({
       success: true,
-      subject: {
-        ...subject.toObject(),
-        semesterNumber: subject.semesterNumber
-      },
+      course,
+      stats,
+      recentEnrollments: enrollments.slice(0, 10)
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Create subject
-// @route   POST /api/subjects
-// @access  Private/Admin
-exports.createSubject = async (req, res, next) => {
+// @desc    Create course
+// @route   POST /api/courses
+// @access  Private (Admin, HOD, Dean)
+exports.createCourse = async (req, res, next) => {
   try {
-    const { year, semester, department } = req.body;
+    const { courseCode, department, faculty, ...courseData } = req.body;
 
-    // Validate year
-    const validYears = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
-    if (!validYears.includes(year)) {
+    // Check permissions
+    if (req.user.role === 'hod') {
+      // HOD can only create courses in their department
+      if (department !== req.user.department?.toString()) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Access denied. You can only create courses in your department.' 
+        });
+      }
+    } else if (req.user.role === 'dean') {
+      // Dean can only create courses in their faculty
+      const dept = await Department.findById(department);
+      if (dept.faculty.toString() !== req.user.facultyManaged?.toString()) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Access denied. You can only create courses in your faculty.' 
+        });
+      }
+    }
+
+    // Check if course code already exists
+    const existingCourse = await Course.findOne({ courseCode });
+    if (existingCourse) {
       return res.status(400).json({ 
-        message: 'Invalid year. Must be: 1st Year, 2nd Year, 3rd Year, or 4th Year' 
+        success: false, 
+        message: 'Course with this code already exists' 
       });
     }
 
-    // Validate semester
-    if (![1, 2].includes(parseInt(semester))) {
+    // Validate department and faculty
+    const dept = await Department.findById(department);
+    if (!dept) {
       return res.status(400).json({ 
-        message: 'Invalid semester. Must be 1 or 2' 
+        success: false, 
+        message: 'Department not found' 
       });
     }
 
-    // Validate department
-    const validDepartments = ['Computer Science', 'Software Engineering', 'Information Technology'];
-    if (!validDepartments.includes(department)) {
-      return res.status(400).json({ 
-        message: 'Invalid department' 
+    // Set academic year if not provided
+    if (!courseData.academicYear) {
+      const currentYear = new Date().getFullYear();
+      courseData.academicYear = `${currentYear}/${currentYear + 1}`;
+    }
+
+    // Set createdBy
+    courseData.createdBy = req.user.id;
+
+    const course = await Course.create({
+      courseCode,
+      department,
+      faculty: dept.faculty,
+      ...courseData
+    });
+
+    // If coordinator is assigned, add them to lecturers array
+    if (courseData.coordinator) {
+      await Course.findByIdAndUpdate(course._id, {
+        $addToSet: { lecturers: courseData.coordinator }
+      });
+      
+      // Add course to coordinator's coursesTaught
+      await User.findByIdAndUpdate(courseData.coordinator, {
+        $addToSet: { coursesTaught: course._id }
       });
     }
 
-    const subject = await Subject.create(req.body);
-    
-    await subject.populate('lecturer', 'name email lecturerId');
+    // Add course to department's courses list
+    await Department.findByIdAndUpdate(department, {
+      $addToSet: { courses: course._id }
+    });
+
+    const populatedCourse = await Course.findById(course._id)
+      .populate('department', 'name code')
+      .populate('faculty', 'name code')
+      .populate('coordinator', 'name email');
 
     res.status(201).json({
       success: true,
-      subject: {
-        ...subject.toObject(),
-        semesterNumber: subject.semesterNumber
-      },
+      message: 'Course created successfully',
+      course: populatedCourse
     });
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ 
-        message: 'Subject code already exists for this year, semester and department' 
-      });
-    }
     next(error);
   }
 };
 
-// @desc    Update subject
-// @route   PUT /api/subjects/:id
-// @access  Private/Admin
-exports.updateSubject = async (req, res, next) => {
+// @desc    Update course
+// @route   PUT /api/courses/:id
+// @access  Private (Admin, HOD, Dean)
+exports.updateCourse = async (req, res, next) => {
   try {
-    const subject = await Subject.findByIdAndUpdate(
+    let course = await Course.findById(req.params.id);
+
+    if (!course) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Course not found' 
+      });
+    }
+
+    // Check permissions
+    const userRole = req.user.role;
+    if (userRole === 'hod' && course.department.toString() !== req.user.department?.toString()) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You can only update courses in your department.' 
+      });
+    }
+
+    if (userRole === 'dean') {
+      const dept = await Department.findById(course.department);
+      if (dept.faculty.toString() !== req.user.facultyManaged?.toString()) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Access denied. You can only update courses in your faculty.' 
+        });
+      }
+    }
+
+    // Set updatedBy
+    req.body.updatedBy = req.user.id;
+
+    // If coordinator is changing, update both old and new coordinator's coursesTaught
+    if (req.body.coordinator && req.body.coordinator !== course.coordinator?.toString()) {
+      // Remove course from old coordinator's coursesTaught
+      if (course.coordinator) {
+        await User.findByIdAndUpdate(course.coordinator, {
+          $pull: { coursesTaught: course._id }
+        });
+      }
+      
+      // Add course to new coordinator's coursesTaught
+      await User.findByIdAndUpdate(req.body.coordinator, {
+        $addToSet: { coursesTaught: course._id }
+      });
+
+      // Ensure new coordinator is in lecturers array
+      await Course.findByIdAndUpdate(course._id, {
+        $addToSet: { lecturers: req.body.coordinator }
+      });
+    }
+
+    // If lecturers array is updated, update their coursesTaught
+    if (req.body.lecturers) {
+      // Remove course from lecturers no longer teaching
+      const removedLecturers = course.lecturers.filter(
+        l => !req.body.lecturers.includes(l.toString())
+      );
+      
+      for (const lecturerId of removedLecturers) {
+        await User.findByIdAndUpdate(lecturerId, {
+          $pull: { coursesTaught: course._id }
+        });
+      }
+
+      // Add course to new lecturers
+      const newLecturers = req.body.lecturers.filter(
+        l => !course.lecturers.map(cl => cl.toString()).includes(l)
+      );
+
+      for (const lecturerId of newLecturers) {
+        await User.findByIdAndUpdate(lecturerId, {
+          $addToSet: { coursesTaught: course._id }
+        });
+      }
+    }
+
+    course = await Course.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true, runValidators: true }
-    ).populate('lecturer', 'name email lecturerId');
-
-    if (!subject) {
-      return res.status(404).json({ message: 'Subject not found' });
-    }
+    )
+    .populate('department', 'name code')
+    .populate('faculty', 'name code')
+    .populate('coordinator', 'name email')
+    .populate('lecturers', 'name email');
 
     res.json({
       success: true,
-      subject: {
-        ...subject.toObject(),
-        semesterNumber: subject.semesterNumber
-      },
+      message: 'Course updated successfully',
+      course
     });
   } catch (error) {
-    if (error.code === 11000) {
+    next(error);
+  }
+};
+
+// @desc    Delete course
+// @route   DELETE /api/courses/:id
+// @access  Private (Admin only)
+exports.deleteCourse = async (req, res, next) => {
+  try {
+    const course = await Course.findById(req.params.id);
+
+    if (!course) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Course not found' 
+      });
+    }
+
+    // Only admin can delete courses
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. Only admin can delete courses.' 
+      });
+    }
+
+    // Check if course has active enrollments
+    const activeEnrollments = await Enrollment.countDocuments({
+      course: course._id,
+      enrollmentStatus: 'enrolled'
+    });
+
+    if (activeEnrollments > 0) {
       return res.status(400).json({ 
-        message: 'Subject code already exists for this year, semester and department' 
+        success: false, 
+        message: 'Cannot delete course with active enrollments. Deactivate the course instead.' 
       });
     }
-    next(error);
-  }
-};
 
-// @desc    Delete subject (soft delete)
-// @route   DELETE /api/subjects/:id
-// @access  Private/Admin
-exports.deleteSubject = async (req, res, next) => {
-  try {
-    const subject = await Subject.findById(req.params.id);
+    // Remove course from all lecturers' coursesTaught
+    await User.updateMany(
+      { coursesTaught: course._id },
+      { $pull: { coursesTaught: course._id } }
+    );
 
-    if (!subject) {
-      return res.status(404).json({ message: 'Subject not found' });
-    }
+    // Remove course from department
+    await Department.findByIdAndUpdate(course.department, {
+      $pull: { courses: course._id }
+    });
 
-    // Soft delete
-    subject.isActive = false;
-    await subject.save();
+    await course.deleteOne();
 
     res.json({
       success: true,
-      message: 'Subject deleted successfully',
+      message: 'Course deleted successfully'
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Get subjects by year and semester
-// @route   GET /api/subjects/year/:year/semester/:semester
+// @desc    Get courses by department
+// @route   GET /api/courses/department/:departmentId
 // @access  Private
-exports.getSubjectsByYearAndSemester = async (req, res, next) => {
+exports.getCoursesByDepartment = async (req, res, next) => {
   try {
-    const { year, semester } = req.params;
-    
-    const query = {
-      year,
-      semester: parseInt(semester),
-      isActive: true,
-    };
+    const { departmentId } = req.params;
+    const { level, semester, academicYear, isActive } = req.query;
 
-    // Add department filter for students
-    if (req.user.role === 'student') {
-      query.department = req.user.department;
+    // Check department access
+    if (req.user.role === 'hod' && req.user.department?.toString() !== departmentId) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You can only view courses in your department.' 
+      });
     }
 
-    const subjects = await Subject.find(query)
-      .populate('lecturer', 'name email lecturerId')
-      .sort({ code: 1 });
+    let query = { department: departmentId };
 
-    res.json({
-      success: true,
-      count: subjects.length,
-      subjects: subjects.map(sub => ({
-        ...sub.toObject(),
-        semesterNumber: sub.semesterNumber
-      })),
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get subjects by year
-// @route   GET /api/subjects/year/:year
-// @access  Private
-exports.getSubjectsByYear = async (req, res, next) => {
-  try {
-    const query = {
-      year: req.params.year,
-      isActive: true,
-    };
-
-    // Add department filter for students
-    if (req.user.role === 'student') {
-      query.department = req.user.department;
-    }
-
-    const subjects = await Subject.find(query)
-      .populate('lecturer', 'name email lecturerId')
-      .sort({ semester: 1, code: 1 });
-
-    res.json({
-      success: true,
-      count: subjects.length,
-      subjects: subjects.map(sub => ({
-        ...sub.toObject(),
-        semesterNumber: sub.semesterNumber
-      })),
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get subjects by department
-// @route   GET /api/subjects/department/:department
-// @access  Private
-exports.getSubjectsByDepartment = async (req, res, next) => {
-  try {
-    const { department } = req.params;
-    const { year, semester } = req.query;
-
-    let query = { 
-      department,
-      isActive: true 
-    };
-
-    if (year) query.year = year;
+    if (level) query.level = level;
     if (semester) query.semester = parseInt(semester);
+    if (academicYear) query.academicYear = academicYear;
+    if (isActive !== undefined) query.isActive = isActive === 'true';
 
-    const subjects = await Subject.find(query)
-      .populate('lecturer', 'name email lecturerId')
-      .sort({ year: 1, semester: 1, code: 1 });
+    const courses = await Course.find(query)
+      .populate('coordinator', 'name email')
+      .populate('lecturers', 'name email')
+      .sort('level semester courseCode');
 
-    // Group by year and semester for easier frontend consumption
-    const groupedSubjects = {};
-    
-    academicYears.forEach(y => {
-      groupedSubjects[y] = {
-        semester1: [],
-        semester2: []
-      };
-    });
-
-    subjects.forEach(sub => {
-      if (groupedSubjects[sub.year]) {
-        const semKey = sub.semester === 1 ? 'semester1' : 'semester2';
-        groupedSubjects[sub.year][semKey].push({
-          ...sub.toObject(),
-          semesterNumber: sub.semesterNumber
-        });
-      }
-    });
-
-    res.json({
-      success: true,
-      count: subjects.length,
-      subjects: groupedSubjects,
-      flatList: subjects.map(sub => ({
-        ...sub.toObject(),
-        semesterNumber: sub.semesterNumber
-      }))
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get subjects by category
-// @route   GET /api/subjects/category/:category
-// @access  Private
-exports.getSubjectsByCategory = async (req, res, next) => {
-  try {
-    const { category } = req.params;
-    
-    const query = {
-      category,
-      isActive: true,
-    };
-
-    if (req.user.role === 'student') {
-      query.department = req.user.department;
-    }
-
-    const subjects = await Subject.find(query)
-      .populate('lecturer', 'name email')
-      .sort({ year: 1, semester: 1, code: 1 });
-
-    res.json({
-      success: true,
-      count: subjects.length,
-      subjects: subjects.map(sub => ({
-        ...sub.toObject(),
-        semesterNumber: sub.semesterNumber
-      }))
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Assign lecturer to subject
-// @route   PUT /api/subjects/:id/assign-lecturer
-// @access  Private/Admin
-exports.assignLecturer = async (req, res, next) => {
-  try {
-    const { lecturerId } = req.body;
-
-    const lecturer = await User.findOne({
-      _id: lecturerId,
-      role: 'lecturer',
-      isActive: true,
-    });
-
-    if (!lecturer) {
-      return res.status(404).json({ message: 'Lecturer not found' });
-    }
-
-    const subject = await Subject.findByIdAndUpdate(
-      req.params.id,
-      { lecturer: lecturerId },
-      { new: true }
-    ).populate('lecturer', 'name email lecturerId');
-
-    if (!subject) {
-      return res.status(404).json({ message: 'Subject not found' });
-    }
-
-    res.json({
-      success: true,
-      subject: {
-        ...subject.toObject(),
-        semesterNumber: subject.semesterNumber
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get subject statistics by year
-// @route   GET /api/subjects/stats/by-year
-// @access  Private/Admin
-exports.getSubjectStatsByYear = async (req, res, next) => {
-  try {
-    const years = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
-    const departments = ['Computer Science', 'Software Engineering', 'Information Technology'];
-    const stats = {};
-
-    for (const year of years) {
-      const yearStats = {
-        totalSubjects: 0,
-        byDepartment: {},
-        byCategory: {},
-        semester1: 0,
-        semester2: 0,
-        totalCredits: 0
-      };
-
-      for (const dept of departments) {
-        const subjects = await Subject.find({ 
-          year, 
-          department: dept,
-          isActive: true 
+    // Get enrollment stats for each course
+    const coursesWithStats = await Promise.all(
+      courses.map(async (course) => {
+        const enrolledCount = await Enrollment.countDocuments({
+          course: course._id,
+          enrollmentStatus: 'enrolled'
         });
 
-        const deptStats = {
-          total: subjects.length,
-          semester1: subjects.filter(s => s.semester === 1).length,
-          semester2: subjects.filter(s => s.semester === 2).length,
-          credits: subjects.reduce((sum, s) => sum + s.credits, 0)
+        return {
+          ...course.toJSON(),
+          enrolledStudents: enrolledCount,
+          availableSeats: course.maxStudents - enrolledCount
         };
-
-        yearStats.byDepartment[dept] = deptStats;
-        yearStats.totalSubjects += deptStats.total;
-        yearStats.semester1 += deptStats.semester1;
-        yearStats.semester2 += deptStats.semester2;
-        yearStats.totalCredits += deptStats.credits;
-
-        // Category breakdown
-        const categories = ['Lecture', 'Practical', 'General', 'Management', 'Project'];
-        categories.forEach(cat => {
-          const catCount = subjects.filter(s => s.category === cat).length;
-          if (!yearStats.byCategory[cat]) yearStats.byCategory[cat] = 0;
-          yearStats.byCategory[cat] += catCount;
-        });
-      }
-
-      stats[year] = yearStats;
-    }
+      })
+    );
 
     res.json({
       success: true,
-      stats,
+      count: courses.length,
+      department: await Department.findById(departmentId).select('name code'),
+      courses: coursesWithStats
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Seed default subjects for all departments
-// @route   POST /api/subjects/seed
-// @access  Private/Admin
-exports.seedSubjects = async (req, res, next) => {
-  try {
-    const { department } = req.body;
-    
-    // Get subjects based on department or all departments
-    let subjectsToSeed = [];
-    
-    if (department && department !== 'all') {
-      // Seed specific department
-      const deptSubjects = getDepartmentSubjects(department);
-      
-      Object.keys(deptSubjects).forEach(year => {
-        ['semester1', 'semester2'].forEach(semKey => {
-          const semester = semKey === 'semester1' ? 1 : 2;
-          const subjects = deptSubjects[year][semKey] || [];
-          
-          subjects.forEach(sub => {
-            subjectsToSeed.push({
-              ...sub,
-              year,
-              semester,
-              department,
-              isActive: true
-            });
-          });
-        });
-      });
-    } else {
-      // Seed all departments
-      subjectsToSeed = getAllSubjectsForSeeding();
-    }
-
-    // Insert subjects, skipping duplicates
-    const results = [];
-    const errors = [];
-
-    for (const subjectData of subjectsToSeed) {
-      try {
-        // Check if subject already exists
-        const existing = await Subject.findOne({
-          code: subjectData.code,
-          year: subjectData.year,
-          semester: subjectData.semester,
-          department: subjectData.department
-        });
-
-        if (!existing) {
-          const subject = await Subject.create(subjectData);
-          results.push(subject);
-        }
-      } catch (error) {
-        errors.push(error.message);
-      }
-    }
-
-    res.status(201).json({
-      success: true,
-      message: `Successfully created ${results.length} subjects`,
-      count: results.length,
-      errors: errors.length > 0 ? errors : undefined
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get subjects by lecturer
-// @route   GET /api/subjects/lecturer/:lecturerId
-// @access  Private/Admin
-exports.getSubjectsByLecturer = async (req, res, next) => {
+// @desc    Get courses by lecturer
+// @route   GET /api/courses/lecturer/:lecturerId
+// @access  Private
+exports.getCoursesByLecturer = async (req, res, next) => {
   try {
     const { lecturerId } = req.params;
 
-    const subjects = await Subject.find({
-      lecturer: lecturerId,
+    // Check access
+    if (req.user.role === 'lecturer' && req.user.id !== lecturerId) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You can only view your own courses.' 
+      });
+    }
+
+    const lecturer = await User.findById(lecturerId);
+    if (!lecturer) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Lecturer not found' 
+      });
+    }
+
+    const courses = await Course.find({
+      $or: [
+        { coordinator: lecturerId },
+        { lecturers: lecturerId }
+      ],
       isActive: true
-    }).sort({ year: 1, semester: 1, code: 1 });
+    })
+    .populate('department', 'name code')
+    .populate('coordinator', 'name email')
+    .sort('academicYear semester level');
+
+    // Get stats for each course
+    const coursesWithStats = await Promise.all(
+      courses.map(async (course) => {
+        const enrollments = await Enrollment.find({
+          course: course._id,
+          enrollmentStatus: 'enrolled'
+        })
+        .populate('student', 'name studentId email')
+        .limit(10);
+
+        const totalStudents = await Enrollment.countDocuments({
+          course: course._id,
+          enrollmentStatus: 'enrolled'
+        });
+
+        return {
+          ...course.toJSON(),
+          totalStudents,
+          recentStudents: enrollments.map(e => e.student)
+        };
+      })
+    );
 
     res.json({
       success: true,
-      count: subjects.length,
-      subjects: subjects.map(sub => ({
-        ...sub.toObject(),
-        semesterNumber: sub.semesterNumber
-      }))
+      count: courses.length,
+      lecturer: {
+        name: lecturer.name,
+        employeeId: lecturer.employeeId,
+        rank: lecturer.lecturerRank
+      },
+      courses: coursesWithStats
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Bulk create subjects
-// @route   POST /api/subjects/bulk
-// @access  Private/Admin
-exports.bulkCreateSubjects = async (req, res, next) => {
+// @desc    Assign lecturer to course
+// @route   PUT /api/courses/:id/assign-lecturer
+// @access  Private (Admin, HOD, Dean)
+exports.assignLecturer = async (req, res, next) => {
   try {
-    const { subjects } = req.body;
+    const { lecturerId, role } = req.body; // role can be 'coordinator', 'lecturer', 'ta'
 
-    if (!Array.isArray(subjects) || subjects.length === 0) {
-      return res.status(400).json({ message: 'Please provide an array of subjects' });
+    const course = await Course.findById(req.params.id);
+    if (!course) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Course not found' 
+      });
     }
 
-    const results = [];
-    const errors = [];
+    // Check permissions
+    if (req.user.role === 'hod' && course.department.toString() !== req.user.department?.toString()) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You can only assign lecturers to courses in your department.' 
+      });
+    }
 
-    for (const subjectData of subjects) {
-      try {
-        const existing = await Subject.findOne({
-          code: subjectData.code,
-          year: subjectData.year,
-          semester: subjectData.semester,
-          department: subjectData.department
+    if (req.user.role === 'dean') {
+      const dept = await Department.findById(course.department);
+      if (dept.faculty.toString() !== req.user.facultyManaged?.toString()) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Access denied. You can only assign lecturers to courses in your faculty.' 
         });
+      }
+    }
 
-        if (!existing) {
-          const subject = await Subject.create(subjectData);
-          results.push(subject);
-        } else {
-          errors.push(`Subject ${subjectData.code} already exists`);
+    const lecturer = await User.findById(lecturerId);
+    if (!lecturer || !['lecturer', 'hod', 'dean'].includes(lecturer.role)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid lecturer' 
+      });
+    }
+
+    let updateQuery = {};
+
+    switch (role) {
+      case 'coordinator':
+        // If there's an existing coordinator, remove them
+        if (course.coordinator) {
+          await User.findByIdAndUpdate(course.coordinator, {
+            $pull: { coursesTaught: course._id }
+          });
         }
+        updateQuery = { 
+          coordinator: lecturerId,
+          $addToSet: { lecturers: lecturerId }
+        };
+        break;
+      
+      case 'lecturer':
+        updateQuery = { $addToSet: { lecturers: lecturerId } };
+        break;
+      
+      case 'ta':
+        updateQuery = { $addToSet: { teachingAssistants: lecturerId } };
+        break;
+      
+      default:
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid role' 
+        });
+    }
+
+    // Add course to lecturer's coursesTaught
+    await User.findByIdAndUpdate(lecturerId, {
+      $addToSet: { coursesTaught: course._id }
+    });
+
+    const updatedCourse = await Course.findByIdAndUpdate(
+      course._id, 
+      updateQuery, 
+      { new: true }
+    )
+    .populate('coordinator', 'name email')
+    .populate('lecturers', 'name email')
+    .populate('teachingAssistants', 'name email');
+
+    res.json({
+      success: true,
+      message: `${role} assigned successfully`,
+      course: updatedCourse
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Remove lecturer from course
+// @route   PUT /api/courses/:id/remove-lecturer/:lecturerId
+// @access  Private (Admin, HOD, Dean)
+exports.removeLecturer = async (req, res, next) => {
+  try {
+    const { id, lecturerId } = req.params;
+
+    const course = await Course.findById(id);
+    if (!course) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Course not found' 
+      });
+    }
+
+    // Check permissions
+    if (req.user.role === 'hod' && course.department.toString() !== req.user.department?.toString()) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You can only remove lecturers from courses in your department.' 
+      });
+    }
+
+    // Remove from all arrays
+    await Course.findByIdAndUpdate(id, {
+      $pull: { 
+        lecturers: lecturerId,
+        teachingAssistants: lecturerId 
+      }
+    });
+
+    // If this was the coordinator, unset that field
+    if (course.coordinator?.toString() === lecturerId) {
+      await Course.findByIdAndUpdate(id, {
+        $unset: { coordinator: 1 }
+      });
+    }
+
+    // Remove course from lecturer's coursesTaught
+    await User.findByIdAndUpdate(lecturerId, {
+      $pull: { coursesTaught: id }
+    });
+
+    res.json({
+      success: true,
+      message: 'Lecturer removed from course successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update course status
+// @route   PUT /api/courses/:id/status
+// @access  Private (Admin, HOD, Dean)
+exports.updateCourseStatus = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+
+    if (!['open', 'closed', 'waitlist'].includes(status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid status' 
+      });
+    }
+
+    const course = await Course.findById(req.params.id);
+    if (!course) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Course not found' 
+      });
+    }
+
+    // Check permissions
+    if (req.user.role === 'hod' && course.department.toString() !== req.user.department?.toString()) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You can only update courses in your department.' 
+      });
+    }
+
+    course.enrollmentStatus = status;
+    course.updatedBy = req.user.id;
+    await course.save();
+
+    // If status changed to closed, notify enrolled students
+    if (status === 'closed') {
+      const enrollments = await Enrollment.find({
+        course: course._id,
+        enrollmentStatus: 'enrolled'
+      }).populate('student');
+
+      for (const enrollment of enrollments) {
+        await Notification.create({
+          user: enrollment.student._id,
+          title: 'Course Enrollment Closed',
+          message: `Enrollment for ${course.courseCode} - ${course.courseName} is now closed.`,
+          type: 'course',
+          priority: 'high',
+          sender: req.user.id,
+          relatedEntity: {
+            entityType: 'Course',
+            entity: course._id
+          }
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Course status updated to ${status}`,
+      course
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get course enrollments
+// @route   GET /api/courses/:id/enrollments
+// @access  Private (Admin, HOD, Dean, Lecturer of course)
+exports.getCourseEnrollments = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, page = 1, limit = 20 } = req.query;
+
+    const course = await Course.findById(id);
+    if (!course) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Course not found' 
+      });
+    }
+
+    // Check access
+    const isLecturer = course.lecturers.some(l => l.toString() === req.user.id);
+    const isCoordinator = course.coordinator?.toString() === req.user.id;
+    
+    if (!['admin', 'hod', 'dean'].includes(req.user.role) && !isLecturer && !isCoordinator) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. Only lecturers of this course can view enrollments.' 
+      });
+    }
+
+    let query = { course: id };
+    if (status) query.enrollmentStatus = status;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const enrollments = await Enrollment.find(query)
+      .populate('student', 'name studentId email phone')
+      .populate('gradedBy', 'name')
+      .sort('-createdAt')
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Enrollment.countDocuments(query);
+
+    // Calculate statistics
+    const stats = {
+      total: await Enrollment.countDocuments({ course: id }),
+      enrolled: await Enrollment.countDocuments({ course: id, enrollmentStatus: 'enrolled' }),
+      completed: await Enrollment.countDocuments({ course: id, enrollmentStatus: 'completed' }),
+      dropped: await Enrollment.countDocuments({ course: id, enrollmentStatus: 'dropped' }),
+      failed: await Enrollment.countDocuments({ course: id, enrollmentStatus: 'failed' })
+    };
+
+    res.json({
+      success: true,
+      count: enrollments.length,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / parseInt(limit)),
+      stats,
+      enrollments
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Bulk create courses
+// @route   POST /api/courses/bulk
+// @access  Private (Admin only)
+exports.bulkCreateCourses = async (req, res, next) => {
+  try {
+    const { courses } = req.body;
+
+    if (!Array.isArray(courses) || courses.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please provide an array of courses' 
+      });
+    }
+
+    const results = {
+      successful: [],
+      failed: []
+    };
+
+    for (const courseData of courses) {
+      try {
+        // Check if course code exists
+        const existing = await Course.findOne({ courseCode: courseData.courseCode });
+        if (existing) {
+          results.failed.push({
+            data: courseData,
+            reason: `Course code ${courseData.courseCode} already exists`
+          });
+          continue;
+        }
+
+        // Validate department
+        const department = await Department.findById(courseData.department);
+        if (!department) {
+          results.failed.push({
+            data: courseData,
+            reason: 'Department not found'
+          });
+          continue;
+        }
+
+        courseData.faculty = department.faculty;
+        courseData.createdBy = req.user.id;
+
+        const course = await Course.create(courseData);
+        results.successful.push(course);
       } catch (error) {
-        errors.push(error.message);
+        results.failed.push({
+          data: courseData,
+          reason: error.message
+        });
       }
     }
 
     res.status(201).json({
       success: true,
-      message: `Successfully created ${results.length} subjects`,
-      results,
-      errors: errors.length > 0 ? errors : undefined
+      message: `Successfully created ${results.successful.length} courses`,
+      results
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get course statistics
+// @route   GET /api/courses/stats
+// @access  Private (Admin, HOD, Dean)
+exports.getCourseStats = async (req, res, next) => {
+  try {
+    let query = {};
+
+    // Role-based filters
+    if (req.user.role === 'hod') {
+      query.department = req.user.department;
+    } else if (req.user.role === 'dean') {
+      query.faculty = req.user.facultyManaged;
+    }
+
+    const stats = {
+      total: await Course.countDocuments(query),
+      byLevel: {},
+      byDepartment: {},
+      byStatus: {},
+      bySemester: {}
+    };
+
+    // Stats by level
+    const levels = ['100', '200', '300', '400', '500', '600', '700'];
+    for (const level of levels) {
+      stats.byLevel[level] = await Course.countDocuments({ ...query, level });
+    }
+
+    // Stats by semester
+    stats.bySemester.semester1 = await Course.countDocuments({ ...query, semester: 1 });
+    stats.bySemester.semester2 = await Course.countDocuments({ ...query, semester: 2 });
+
+    // Stats by status
+    const statuses = ['open', 'closed', 'waitlist'];
+    for (const status of statuses) {
+      stats.byStatus[status] = await Course.countDocuments({ ...query, enrollmentStatus: status });
+    }
+
+    // Active vs inactive
+    stats.active = await Course.countDocuments({ ...query, isActive: true });
+    stats.inactive = await Course.countDocuments({ ...query, isActive: false });
+
+    // Department-wise stats
+    const departments = await Department.find(
+      req.user.role === 'hod' ? { _id: req.user.department } : 
+      req.user.role === 'dean' ? { faculty: req.user.facultyManaged } : {}
+    );
+
+    for (const dept of departments) {
+      stats.byDepartment[dept.name] = await Course.countDocuments({ 
+        ...query, 
+        department: dept._id 
+      });
+    }
+
+    // Get total enrolled students across all courses
+    const courses = await Course.find(query).select('_id');
+    const courseIds = courses.map(c => c._id);
+    
+    stats.totalEnrollments = await Enrollment.countDocuments({
+      course: { $in: courseIds },
+      enrollmentStatus: 'enrolled'
+    });
+
+    res.json({
+      success: true,
+      stats
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get course timetable
+// @route   GET /api/courses/:id/timetable
+// @access  Private
+exports.getCourseTimetable = async (req, res, next) => {
+  try {
+    const course = await Course.findById(req.params.id)
+      .populate('lecturers', 'name')
+      .populate('coordinator', 'name');
+
+    if (!course) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Course not found' 
+      });
+    }
+
+    // Check access
+    const isEnrolled = await Enrollment.exists({
+      student: req.user.id,
+      course: course._id,
+      enrollmentStatus: 'enrolled'
+    });
+
+    const isLecturer = course.lecturers.some(l => l.toString() === req.user.id);
+    
+    if (!['admin', 'hod', 'dean'].includes(req.user.role) && !isLecturer && !isEnrolled) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You are not enrolled in this course.' 
+      });
+    }
+
+    const timetable = {
+      course: {
+        code: course.courseCode,
+        name: course.courseName,
+        credits: course.credits,
+        level: course.level,
+        semester: course.semester
+      },
+      lecturers: course.lecturers,
+      coordinator: course.coordinator,
+      schedule: {
+        lectureHours: course.lectureHours || 'TBD',
+        tutorialHours: course.tutorialHours || 'TBD',
+        practicalHours: course.practicalHours || 'TBD'
+      },
+      assessment: course.assessmentStructure
+    };
+
+    res.json({
+      success: true,
+      timetable
     });
   } catch (error) {
     next(error);

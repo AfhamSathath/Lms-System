@@ -1,102 +1,168 @@
 const mongoose = require('mongoose');
 
-const subjectSchema = new mongoose.Schema({
-  name: {
+const courseSchema = new mongoose.Schema({
+  courseCode: {
     type: String,
-    required: [true, 'Subject name is required'],
-    trim: true,
-  },
-  code: {
-    type: String,
-    required: [true, 'Subject code is required'],
+    required: [true, 'Course code is required'],
     unique: true,
-    uppercase: true,
-    trim: true,
+    toUpperCase: true,
+    trim: true
   },
-  credits: {
-    type: Number,
-    required: [true, 'Credits are required'],
-    min: [1, 'Credits must be at least 1'],
-    max: [5, 'Credits cannot exceed 5'],
-  },
-  year: {
+  courseName: {
     type: String,
-    required: [true, 'Academic year is required'],
-    enum: ['1st Year', '2nd Year', '3rd Year', '4th Year'],
-  },
-  semester: {
-    type: Number,
-    required: [true, 'Semester is required'],
-    min: 1,
-    max: 2,
-  },
-  department: {
-    type: String,
-    required: [true, 'Department is required'],
-    enum: ['Computer Science', 'Software Engineering', 'Information Technology'],
-  },
-  category: {
-    type: String,
-    enum: ['Lecture', 'Practical', 'General', 'Management', 'Project'],
-    default: 'Lecture',
-  },
-  hasPractical: {
-    type: Boolean,
-    default: false,
-  },
-  practicalCode: {
-    type: String,
-    uppercase: true,
-    trim: true,
-  },
-  lecturer: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    validate: {
-      validator: async function(v) {
-        if (!v) return true;
-        const user = await mongoose.model('User').findById(v);
-        return user && user.role === 'lecturer';
-      },
-      message: 'Invalid lecturer',
-    },
+    required: [true, 'Course name is required'],
+    trim: true
   },
   description: {
     type: String,
-    default: '',
+    maxlength: [1000, 'Description cannot exceed 1000 characters']
   },
-  syllabus: {
+  credits: {
+    type: Number,
+    required: [true, 'Course credits are required'],
+    min: [1, 'Credits must be at least 1'],
+    max: [6, 'Credits cannot exceed 6']
+  },
+  department: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Department',
+    required: [true, 'Department is required']
+  },
+  faculty: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Faculty',
+    required: [true, 'Faculty is required']
+  },
+  
+  // Course levels
+  level: {
     type: String,
-    default: '',
+    enum: ['100', '200', '300', '400', '500', '600', '700'],
+    required: [true, 'Course level is required']
   },
+  semester: {
+    type: Number,
+    enum: [1, 2],
+    required: [true, 'Semester is required']
+  },
+  
+  // Instructors
+  coordinator: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  lecturers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  teachingAssistants: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  
+  // Prerequisites
+  prerequisites: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Course'
+  }],
+  
+  // Assessment structure
+  assessmentStructure: {
+    continuousAssessment: {
+      weight: {
+        type: Number,
+        min: 0,
+        max: 100,
+        default: 40
+      },
+      components: [{
+        name: String,
+        weight: Number,
+        maxMarks: Number
+      }]
+    },
+    finalExam: {
+      weight: {
+        type: Number,
+        min: 0,
+        max: 100,
+        default: 60
+      },
+      duration: {
+        type: Number,
+        default: 3
+      } // in hours
+    },
+    practical: {
+      weight: Number,
+      components: [{
+        name: String,
+        weight: Number,
+        maxMarks: Number
+      }]
+    }
+  },
+  
+  // Schedule
+  lectureHours: Number,
+  tutorialHours: Number,
+  practicalHours: Number,
+  
+  // Enrollment
+  maxStudents: {
+    type: Number,
+    default: 100
+  },
+  currentEnrollment: {
+    type: Number,
+    default: 0
+  },
+  enrollmentStatus: {
+    type: String,
+    enum: ['open', 'closed', 'waitlist'],
+    default: 'open'
+  },
+  
+  // Academic year
+  academicYear: {
+    type: String,
+    required: [true, 'Academic year is required']
+  },
+  
   isActive: {
     type: Boolean,
-    default: true,
+    default: true
   },
-  createdAt: {
-    type: Date,
-    default: Date.now,
+  
+  // Additional details
+  learningOutcomes: [String],
+  textbooks: [{
+    title: String,
+    author: String,
+    edition: String,
+    isbn: String,
+    required: {
+      type: Boolean,
+      default: true
+    }
+  }],
+  syllabus: String,
+  
+  // Metadata
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   },
+  updatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }
+}, {
+  timestamps: true
 });
 
-// Helper function to get semester number (1-8)
-subjectSchema.virtual('semesterNumber').get(function() {
-  const yearMap = {
-    '1st Year': 1,
-    '2nd Year': 2,
-    '3rd Year': 3,
-    '4th Year': 4
-  };
-  const yearNum = yearMap[this.year] || 0;
-  return (yearNum - 1) * 2 + this.semester;
-});
+courseSchema.index({ courseCode: 1 });
+courseSchema.index({ department: 1, level: 1, semester: 1 });
+courseSchema.index({ lecturers: 1 });
 
-// Compound index for unique subject per year-semester-department
-subjectSchema.index({ code: 1, year: 1, semester: 1, department: 1 }, { unique: true });
-
-// Index for efficient queries
-subjectSchema.index({ year: 1, semester: 1 });
-subjectSchema.index({ department: 1, year: 1, semester: 1 });
-subjectSchema.index({ category: 1 });
-
-module.exports = mongoose.model('Subject', subjectSchema);
+module.exports = mongoose.model('Course', courseSchema);
