@@ -75,7 +75,8 @@ try {
   );
 
   // Admin only routes
-  router.use(authorize('admin', 'hod', 'dean', 'registrar'));
+  router.use(authorize('admin'));
+  router.get('/stats', protect, authorize('admin'), getUserStats);
 
   router.route('/')
     .get(getUsers)

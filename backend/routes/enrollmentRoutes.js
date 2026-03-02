@@ -15,55 +15,85 @@ const {
   getCourseEnrollments,
   generateGradeSheet,
   withdrawStudent
-} = enrollmentController = require('../controllers/enrollmentController');
+} = EntrollmentController=require('../controllers/enrollmentController');
 
 // All routes require authentication
 router.use(protect);
 
-// Public routes (within auth)
-router.get('/', getEnrollments);
-router.get('/:id', getEnrollment);
+/* =====================================
+   IMPORTANT: Specific routes FIRST
+===================================== */
+
+// Student enrollments
 router.get('/student/:studentId', getStudentEnrollments);
+
+// Course enrollments
 router.get('/course/:courseId', getCourseEnrollments);
-router.get('/course/:courseId/grade-sheet', 
-  authorize('lecturer', 'hod', 'admin'), 
+
+// Course grade sheet
+router.get(
+  '/course/:courseId/grade-sheet',
+  authorize('lecturer', 'hod', 'admin'),
   generateGradeSheet
 );
 
-// Protected routes
-router.post('/', 
-  authorize('admin', 'registrar', 'hod'), 
+// Get all enrollments
+router.get('/', getEnrollments);
+
+// Get single enrollment (KEEP LAST)
+router.get('/:id', getEnrollment);
+
+/* =====================================
+   Protected routes
+===================================== */
+
+// Create enrollment
+router.post(
+  '/',
+  authorize('admin', 'registrar', 'hod'),
   validateEnrollment,
   createEnrollment
 );
 
-router.post('/bulk', 
-  authorize('admin', 'registrar'), 
+// Bulk enroll
+router.post(
+  '/bulk',
+  authorize('admin', 'registrar'),
   bulkEnrollStudents
 );
 
-router.put('/:id', 
-  authorize('admin', 'registrar', 'lecturer'), 
+// Update enrollment
+router.put(
+  '/:id',
+  authorize('admin', 'registrar', 'lecturer'),
   updateEnrollment
 );
 
-router.put('/:id/grades', 
-  authorize('lecturer', 'hod', 'admin'), 
+// Update grades
+router.put(
+  '/:id/grades',
+  authorize('lecturer', 'hod', 'admin'),
   updateGrades
 );
 
-router.put('/:id/attendance', 
-  authorize('lecturer', 'hod', 'admin'), 
+// Update attendance
+router.put(
+  '/:id/attendance',
+  authorize('lecturer', 'hod', 'admin'),
   updateAttendance
 );
 
-router.put('/:id/withdraw', 
-  authorize('student', 'admin', 'registrar'), 
+// Withdraw student
+router.put(
+  '/:id/withdraw',
+  authorize('student', 'admin', 'registrar'),
   withdrawStudent
 );
 
-router.delete('/:id', 
-  authorize('admin'), 
+// Delete enrollment
+router.delete(
+  '/:id',
+  authorize('admin'),
   deleteEnrollment
 );
 

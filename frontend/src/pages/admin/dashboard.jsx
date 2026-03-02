@@ -3,174 +3,274 @@ import { useAuth } from '../../context/Authcontext';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import Loader from '../../components/common/loader';
-import { FiUsers, FiBook, FiFile, FiUserPlus } from 'react-icons/fi';
+import {
+  FiUsers, FiBook, FiFile, FiUserPlus,
+  FiTrendingUp, FiPieChart,
+  FiDownload, FiArrowUp, FiClock
+} from 'react-icons/fi';
 import { Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   ArcElement,
   Tooltip,
-  Legend
+  Legend,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Filler
 } from 'chart.js';
+import toast from 'react-hot-toast';
 
-ChartJS.register(ArcElement, Tooltip, Legend);
+ChartJS.register(
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Filler
+);
 
 const AdminDashboard = ({ sidebarOpen }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+
   const [stats, setStats] = useState({
-    students: 0,
-    lecturers: 0,
-    subjects: 0,
-    files: 0,
-    recentActivities: []
+    users: { total: 0, students: 0, lecturers: 0, admins: 0, active: 0, newThisMonth: 0, hods: 0, deans: 0 },
+    courses: { total: 0, active: 0 },
+    files: { total: 0, totalDownloads: 0 },
+    enrollments: { total: 0, active: 0 }
   });
+
+  const [lastLogins, setLastLogins] = useState([]);
+  const [recentActivities, setRecentActivities] = useState([]);
 
   useEffect(() => {
     fetchDashboardData();
+    const interval = setInterval(fetchDashboardData, 60000);
+    return () => clearInterval(interval);
   }, []);
+
+  const fetchWithFallback = async (url, fallback) => {
+    try {
+      const res = await api.get(url);
+      return res.data;
+    } catch (err) {
+      console.warn(`Failed to fetch ${url}`, err.message);
+      return fallback;
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
-      const [studentsRes, lecturersRes, subjectsRes, filesRes] = await Promise.all([
-        api.get('/users?role=student'),
-        api.get('/users?role=lecturer'),
-        api.get('/subjects'),
-        api.get('/files')
+      setLoading(true);
+
+      const [
+        usersData,
+        coursesData,
+        filesData,
+        enrollmentsData,
+        loginData,
+        activityData
+      ] = await Promise.all([
+        fetchWithFallback('/api/admin/users/stats', { stats: {} }),
+        fetchWithFallback('/api/admin/courses/stats', { stats: {} }),
+        fetchWithFallback('/api/admin/files/stats', { stats: {} }),
+        fetchWithFallback('/api/admin/enrollments/stats', { stats: {} }),
+        fetchWithFallback('/api/admin/users/last-logins', { users: [] }),
+        fetchWithFallback('/api/admin/activities/recent', { activities: [] })
       ]);
 
       setStats({
-        students: studentsRes.data.count,
-        lecturers: lecturersRes.data.count,
-        subjects: subjectsRes.data.count,
-        files: filesRes.data.count,
-        recentActivities: []
+        users: {
+          total: usersData.stats?.total || 0,
+          students: usersData.stats?.students || 0,
+          lecturers: usersData.stats?.lecturers || 0,
+          admins: usersData.stats?.admins || 0,
+          active: usersData.stats?.active || 0,
+          newThisMonth: usersData.stats?.newThisMonth || 0,
+          hods: usersData.stats?.hods || 0,
+          deans: usersData.stats?.deans || 0
+        },
+        courses: {
+          total: coursesData.stats?.total || 0,
+          active: coursesData.stats?.active || 0
+        },
+        files: {
+          total: filesData.stats?.total || 0,
+          totalDownloads: filesData.stats?.totalDownloads || 0
+        },
+        enrollments: {
+          total: enrollmentsData.stats?.total || 0,
+          active: enrollmentsData.stats?.active || 0
+        }
       });
+
+      setLastLogins(loginData.users || []);
+      setRecentActivities(activityData.activities || []);
+
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error('Error fetching dashboard data:', error);
+      toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) return <Loader fullScreen />;
-
   const userDistributionData = {
-    labels: ['Students', 'Lecturers'],
+    labels: ['Students', 'Lecturers', 'Admins', 'HODs', 'Deans'],
     datasets: [{
-      data: [stats.students, stats.lecturers],
-      backgroundColor: ['#3B82F6', '#10B981'],
-      borderColor: ['#2563EB', '#059669'],
-      borderWidth: 1
+      data: [
+        stats.users.students,
+        stats.users.lecturers,
+        stats.users.admins,
+        stats.users.hods,
+        stats.users.deans
+      ],
+      backgroundColor: ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444']
     }]
   };
 
-  const resourceData = {
-    labels: ['Subjects', 'Files'],
-    datasets: [{
-      data: [stats.subjects, stats.files],
-      backgroundColor: ['#F59E0B', '#EF4444'],
-      borderColor: ['#D97706', '#DC2626'],
-      borderWidth: 1
-    }]
-  };
+  if (loading && stats.users.total === 0) {
+    return <Loader fullScreen />;
+  }
 
   return (
     <div
-      className={`container mx-auto px-4 py-8 transition-all duration-300`}
-      style={{ marginLeft: sidebarOpen ? 208 : 64 }} // matches sidebar width (w-52 / w-16)
+      className="container mx-auto px-4 py-8 transition-all duration-300"
+      style={{ marginLeft: sidebarOpen ? 208 : 64 }}
     >
+
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl shadow-xl p-6 mb-8 text-white">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2 truncate">
-              Welcome back, Admin {user?.name}! 👋
-            </h1>
-            <p className="text-purple-100 truncate">
-              Manage your LMS system efficiently
+      <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 rounded-2xl shadow-xl p-8 mb-8 text-white">
+        <h1 className="text-3xl font-bold">
+          Welcome back, {user?.name?.split(' ')[0] || 'Admin'} 👋
+        </h1>
+        <p className="text-purple-100">Here’s what’s happening today</p>
+      </div>
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <StatCard title="Total Users" value={stats.users.total} icon={<FiUsers />} trend={stats.users.newThisMonth} trendLabel="new this month" />
+        <StatCard title="Total Courses" value={stats.courses.total} icon={<FiBook />} trend={stats.courses.active} trendLabel="active" />
+        <StatCard title="Enrollments" value={stats.enrollments.total} icon={<FiTrendingUp />} trend={stats.enrollments.active} trendLabel="active" />
+        <StatCard title="Files" value={stats.files.total} icon={<FiFile />} trend={stats.files.totalDownloads} trendLabel="downloads" />
+      </div>
+
+      {/* User Distribution Chart */}
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <h3 className="text-lg font-semibold flex items-center">
+          <FiPieChart className="mr-2 text-purple-600" />
+          User Distribution
+        </h3>
+        <div className="h-80 mt-4">
+          {stats.users.total > 0 ? (
+            <Doughnut data={userDistributionData} />
+          ) : (
+            <p className="text-center text-gray-500 py-20">
+              No user data available
             </p>
-          </div>
-          <div className="flex-shrink-0">
-            <Link
-              to="/admin/users"
-              className="bg-white text-purple-600 px-5 py-2 rounded-lg hover:bg-purple-50 transition-colors font-medium inline-flex items-center whitespace-nowrap"
+          )}
+        </div>
+      </div>
+
+      {/* Last Login Section */}
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <h3 className="text-lg font-semibold flex items-center mb-4">
+          <FiClock className="mr-2 text-blue-600" />
+          Recent User Logins
+        </h3>
+
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-gray-600 border-b">
+              <th className="py-2">Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Last Login</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lastLogins.map((u) => (
+              <tr key={u._id} className="border-b hover:bg-gray-50">
+                <td className="py-2">{u.name}</td>
+                <td>{u.email}</td>
+                <td>
+                  <RoleBadge role={u.role} />
+                </td>
+                <td>{new Date(u.lastLogin).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Recent Activities */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h3 className="text-lg font-semibold mb-4">Recent Activities</h3>
+
+        <div className="space-y-3">
+          {recentActivities.map((activity) => (
+            <div
+              key={activity._id}
+              className="flex justify-between items-center border-b pb-2"
             >
-              <FiUserPlus className="mr-2" />
-              Add New User
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {[
-          { label: 'Total Students', value: stats.students, icon: <FiUsers className="h-8 w-8 text-blue-600" />, color: 'blue' },
-          { label: 'Total Lecturers', value: stats.lecturers, icon: <FiUsers className="h-8 w-8 text-green-600" />, color: 'green' },
-          { label: 'Total Subjects', value: stats.subjects, icon: <FiBook className="h-8 w-8 text-yellow-600" />, color: 'yellow' },
-          { label: 'Total Files', value: stats.files, icon: <FiFile className="h-8 w-8 text-purple-600" />, color: 'purple' }
-        ].map((card, idx) => (
-          <div key={idx} className="bg-white rounded-xl shadow-lg p-6 flex flex-col min-w-0">
-            <div className="flex items-center">
-              <div className={`p-3 bg-${card.color}-100 rounded-lg flex-shrink-0`}>
-                {card.icon}
+              <div>
+                <p className="font-medium">
+                  {activity.user?.name}
+                  <RoleBadge role={activity.user?.role} />
+                </p>
+                <p className="text-sm text-gray-500">
+                  {activity.action}
+                </p>
               </div>
-              <div className="ml-4 min-w-0">
-                <p className="text-sm text-gray-500 truncate">{card.label}</p>
-                <p className="text-2xl font-bold text-gray-800 truncate">{card.value}</p>
-              </div>
+              <span className="text-xs text-gray-400">
+                {new Date(activity.createdAt).toLocaleString()}
+              </span>
             </div>
-            <div className="mt-4">
-              <Link
-                to={`/admin/${card.label.toLowerCase().split(' ')[1]}`}
-                className={`text-sm text-${card.color}-600 hover:text-${card.color}-800 truncate`}
-              >
-                View all {card.label.toLowerCase().split(' ')[1]} →
-              </Link>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        {/* User Distribution */}
-        <div className="bg-white rounded-xl shadow-lg p-6 min-w-0 flex flex-col">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <FiUsers className="mr-2 text-blue-600" />
-            User Distribution
-          </h3>
-          <div className="flex-1 min-h-[200px] h-64">
-            {stats.students + stats.lecturers > 0 ? (
-              <Doughnut data={userDistributionData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }} />
-            ) : (
-              <div className="h-full flex items-center justify-center text-gray-500">
-                No data available
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Resources Overview */}
-        <div className="bg-white rounded-xl shadow-lg p-6 min-w-0 flex flex-col">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <FiBook className="mr-2 text-yellow-600" />
-            Resources Overview
-          </h3>
-          <div className="flex-1 min-h-[200px] h-64">
-            {stats.subjects + stats.files > 0 ? (
-              <Doughnut data={resourceData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }} />
-            ) : (
-              <div className="h-full flex items-center justify-center text-gray-500">
-                No data available
-              </div>
-            )}
-          </div>
+          ))}
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">  </div>
-      <div className="bg-white rounded-xl shadow-lg p-6">  </div>
+
     </div>
+  );
+};
+
+const StatCard = ({ title, value, icon, trend, trendLabel }) => (
+  <div className="bg-white rounded-xl shadow-lg p-6">
+    <div className="flex justify-between items-center mb-4">
+      <div className="p-3 bg-gray-100 rounded-lg">{icon}</div>
+      <span className="text-sm text-gray-600 flex items-center">
+        <FiArrowUp className="text-green-500 mr-1" />
+        {trend} {trendLabel}
+      </span>
+    </div>
+    <h3 className="text-gray-600 text-sm">{title}</h3>
+    <p className="text-3xl font-bold text-gray-800">
+      {value.toLocaleString()}
+    </p>
+  </div>
+);
+
+const RoleBadge = ({ role }) => {
+  const colors = {
+    student: 'bg-blue-100 text-blue-600',
+    lecturer: 'bg-green-100 text-green-600',
+    admin: 'bg-purple-100 text-purple-600',
+    hod: 'bg-yellow-100 text-yellow-600',
+    dean: 'bg-red-100 text-red-600'
+  };
+
+  return (
+    <span className={`ml-2 px-2 py-1 rounded text-xs ${colors[role] || 'bg-gray-100 text-gray-600'}`}>
+      {role}
+    </span>
   );
 };
 

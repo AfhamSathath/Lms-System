@@ -9,17 +9,6 @@ const path = require('path');
 // Load environment variables
 dotenv.config();
 
-// Import routes
-const authRoutes = require('./routes/authroutes');
-const userRoutes = require('./routes/userroutes');
-const subjectRoutes = require('./routes/subjectroutes');
-const resultRoutes = require('./routes/resultroutes');
-const fileRoutes = require('./routes/fileroutes');
-const notificationRoutes = require('./routes/notificationroutes');
-const timetableRoutes = require('./routes/timetableroutes');
-const facultyRoutes = require('./routes/facultyRoutes');
-const departmentRoutes = require('./routes/departmentRoutes');
-
 
 const app = express();
 
@@ -50,15 +39,19 @@ app.get('/', (req, res) => {
 });
 
 // ================= API ROUTES =================
-app.use('/auth', authRoutes);
-app.use('/users', userRoutes);
-app.use('/subjects', subjectRoutes);
-app.use('/results', resultRoutes);
-app.use('/files', fileRoutes);
-app.use('/notifications', notificationRoutes);
-app.use('/timetables', timetableRoutes);
-app.use('/faculties', facultyRoutes);
-app.use('/departments', departmentRoutes);
+app.use('/api/auth', require('./routes/authroutes'));
+app.use('/api/users', require('./routes/userroutes'));
+app.use('/api/subjects', require('./routes/courseroutes'));
+app.use('/api/results', require('./routes/resultroutes'));
+app.use('/api/files', require('./routes/fileroutes'));
+app.use('/api/notifications', require('./routes/notificationroutes'));
+app.use('/api/timetables', require('./routes/timetableroutes'));
+app.use('/api/enrollments', require('./routes/enrollmentRoutes'));
+app.use('/api/stats', require('./routes/statsRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
+
+
+
 
 // ================= 404 HANDLER =================
 app.use((req, res) => {
@@ -69,7 +62,7 @@ app.use((req, res) => {
 });
 
 // ================= ERROR HANDLER =================
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
   console.error(err.stack);
 
   res.status(err.status || 500).json({

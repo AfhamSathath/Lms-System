@@ -1,7 +1,7 @@
 const Department = require('../models/Department');
 const User = require('../models/user');
-const Course = require('../models/subject');
-const Faculty = require('../models/Faculty');
+const Course = require('../models/course');
+
 
 // @desc    Get all departments
 // @route   GET /api/departments
@@ -110,7 +110,7 @@ exports.getDepartment = async (req, res, next) => {
       });
     }
 
-    if (req.user.role === 'dean' && department.faculty._id.toString() !== req.user.facultyManaged?.toString()) {
+    if (req.user.role === 'dean' && department.faculty?._id?.toString() !== req.user.facultyManaged?.toString()) {
       return res.status(403).json({ 
         success: false, 
         message: 'Access denied. You can only view departments in your faculty.' 
@@ -220,12 +220,17 @@ exports.createDepartment = async (req, res, next) => {
       });
     }
 
-    const department = await Department.create(req.body);
+    const department = await Department.create({
+      ...req.body,
+      createdBy: req.user.id
+    });
 
     // Add department to faculty's departments list (if using virtual)
-    await Faculty.findByIdAndUpdate(faculty, {
-      $addToSet: { departments: department._id }
-    });
+    if (faculty) {
+      await Faculty.findByIdAndUpdate(faculty, {
+        $addToSet: { departments: department._id }
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -254,7 +259,7 @@ exports.updateDepartment = async (req, res, next) => {
     // Check permissions
     const canUpdate = 
       req.user.role === 'admin' ||
-      (req.user.role === 'dean' && department.faculty.toString() === req.user.facultyManaged?.toString()) ||
+      (req.user.role === 'dean' && department.faculty?.toString() === req.user.facultyManaged?.toString()) ||
       (req.user.role === 'hod' && department._id.toString() === req.user.department?.toString());
 
     if (!canUpdate) {
@@ -271,7 +276,8 @@ exports.updateDepartment = async (req, res, next) => {
         await User.findByIdAndUpdate(department.headOfDepartment, {
           isHOD: false,
           hodSince: null,
-          hodEndDate: new Date()
+          hodEndDate: new Date(),
+          role: 'lecturer'
         });
       }
 
@@ -279,9 +285,13 @@ exports.updateDepartment = async (req, res, next) => {
       await User.findByIdAndUpdate(req.body.headOfDepartment, {
         isHOD: true,
         hodSince: new Date(),
-        department: department._id
+        department: department._id,
+        role: 'hod'
       });
     }
+
+    req.body.updatedBy = req.user.id;
+    req.body.updatedAt = new Date();
 
     const updatedDepartment = await Department.findByIdAndUpdate(
       req.params.id,
@@ -348,6 +358,13 @@ exports.deleteDepartment = async (req, res, next) => {
       });
     }
 
+    // Remove department from faculty's departments list
+    if (department.faculty) {
+      await Faculty.findByIdAndUpdate(department.faculty, {
+        $pull: { departments: department._id }
+      });
+    }
+
     await department.deleteOne();
 
     res.json({
@@ -379,6 +396,15 @@ exports.getDepartmentStats = async (req, res, next) => {
         success: false, 
         message: 'Access denied. You can only view your own department statistics.' 
       });
+    }
+
+    if (req.user.role === 'dean') {
+      if (department.faculty?.toString() !== req.user.facultyManaged?.toString()) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Access denied. You can only view departments in your faculty.' 
+        });
+      }
     }
 
     // Comprehensive statistics
@@ -503,10 +529,33 @@ exports.getDepartmentStats = async (req, res, next) => {
       enrollmentStatus: 'closed',
       isActive: true
     });
+    stats.courses.byStatus.waitlist = await Course.countDocuments({
+      department: department._id,
+      enrollmentStatus: 'waitlist',
+      isActive: true
+    });
+
+    // Calculate average class size
+    const courses = await Course.find({ 
+      department: department._id, 
+      isActive: true 
+    }).select('_id');
+    
+    const courseIds = courses.map(c => c._id);
+    
+    if (courseIds.length > 0) {
+      const Enrollment = require('../models/Enrollment');
+      const enrollments = await Enrollment.countDocuments({
+        course: { $in: courseIds },
+        enrollmentStatus: { $in: ['enrolled', 'completed'] }
+      });
+      stats.courses.averageClassSize = Math.round(enrollments / courseIds.length);
+    }
 
     res.json({
       success: true,
       department: {
+        id: department._id,
         name: department.name,
         code: department.code
       },
@@ -524,6 +573,13 @@ exports.assignHOD = async (req, res, next) => {
   try {
     const { lecturerId } = req.body;
 
+    if (!lecturerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide lecturer ID'
+      });
+    }
+
     const department = await Department.findById(req.params.id);
     if (!department) {
       return res.status(404).json({ 
@@ -533,7 +589,7 @@ exports.assignHOD = async (req, res, next) => {
     }
 
     // Check permissions
-    if (req.user.role === 'dean' && department.faculty.toString() !== req.user.facultyManaged?.toString()) {
+    if (req.user.role === 'dean' && department.faculty?.toString() !== req.user.facultyManaged?.toString()) {
       return res.status(403).json({ 
         success: false, 
         message: 'Access denied. You can only assign HOD to departments in your faculty.' 
@@ -566,7 +622,8 @@ exports.assignHOD = async (req, res, next) => {
       await User.findByIdAndUpdate(department.headOfDepartment, {
         isHOD: false,
         hodSince: null,
-        hodEndDate: new Date()
+        hodEndDate: new Date(),
+        role: 'lecturer'
       });
     }
 
@@ -578,7 +635,8 @@ exports.assignHOD = async (req, res, next) => {
     await User.findByIdAndUpdate(lecturerId, {
       isHOD: true,
       hodSince: new Date(),
-      department: department._id
+      department: department._id,
+      role: 'hod'
     });
 
     const updatedDepartment = await Department.findById(department._id)
@@ -600,7 +658,7 @@ exports.assignHOD = async (req, res, next) => {
 exports.getDepartmentCourses = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { level, semester, isActive } = req.query;
+    const { level, semester, isActive = true } = req.query;
 
     // Check access
     if (req.user.role === 'hod' && req.user.department?.toString() !== id) {
@@ -610,11 +668,10 @@ exports.getDepartmentCourses = async (req, res, next) => {
       });
     }
 
-    let query = { department: id };
+    let query = { department: id, isActive: isActive === 'true' };
 
     if (level) query.level = level;
     if (semester) query.semester = parseInt(semester);
-    if (isActive !== undefined) query.isActive = isActive === 'true';
 
     const courses = await Course.find(query)
       .populate('coordinator', 'name email')
@@ -623,10 +680,11 @@ exports.getDepartmentCourses = async (req, res, next) => {
 
     // Group by level
     const groupedByLevel = courses.reduce((acc, course) => {
-      if (!acc[course.level]) {
-        acc[course.level] = [];
+      const level = course.level || 'other';
+      if (!acc[level]) {
+        acc[level] = [];
       }
-      acc[course.level].push(course);
+      acc[level].push(course);
       return acc;
     }, {});
 

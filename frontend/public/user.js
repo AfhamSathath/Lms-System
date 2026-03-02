@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['student', 'lecturer', 'admin', 'hod', 'dean'],
+    enum: ['student', 'lecturer', 'admin'],
     default: 'student',
   },
   studentId: {
@@ -59,10 +59,7 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
-  lastLogin: {
-    type: Date,
-    default: null, // ensure null if never logged in
-  },
+  lastLogin: Date,
   createdAt: {
     type: Date,
     default: Date.now,

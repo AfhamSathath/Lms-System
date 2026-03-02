@@ -1,55 +1,205 @@
-// controllers/timetableController.js
 const Timetable = require('../models/timetable');
-const Course = require('../models/subject');
+const Course = require('../models/course');
 const User = require('../models/user');
 const Notification = require('../models/notification');
 const Department = require('../models/Department');
-const Faculty = require('../models/Faculty');
 const Enrollment = require('../models/Enrollment');
 const mongoose = require('mongoose');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
 
 // Helper function to check for scheduling conflicts
 const checkScheduleConflict = async (date, startTime, endTime, venue, excludeId = null) => {
-  const query = {
-    date: new Date(date),
-    venue,
-    $or: [
-      {
-        startTime: { $lt: endTime },
-        endTime: { $gt: startTime }
-      }
-    ]
-  };
+  try {
+    const query = {
+      date: new Date(date),
+      venue,
+      status: { $ne: 'cancelled' },
+      $or: [
+        {
+          startTime: { $lt: endTime },
+          endTime: { $gt: startTime }
+        }
+      ]
+    };
 
-  if (excludeId) {
-    query._id = { $ne: excludeId };
+    if (excludeId) {
+      query._id = { $ne: excludeId };
+    }
+
+    const conflict = await Timetable.findOne(query);
+    return conflict;
+  } catch (error) {
+    console.error('Conflict check error:', error);
+    return null;
   }
-
-  const conflict = await Timetable.findOne(query);
-  return conflict;
 };
 
 // Helper function to check lecturer availability
 const checkLecturerAvailability = async (lecturerId, date, startTime, endTime, excludeId = null) => {
-  const query = {
-    'lecturers': lecturerId,
-    date: new Date(date),
-    $or: [
-      {
-        startTime: { $lt: endTime },
-        endTime: { $gt: startTime }
-      }
-    ]
-  };
+  try {
+    const query = {
+      lecturers: lecturerId,
+      date: new Date(date),
+      status: { $ne: 'cancelled' },
+      $or: [
+        {
+          startTime: { $lt: endTime },
+          endTime: { $gt: startTime }
+        }
+      ]
+    };
 
-  if (excludeId) {
-    query._id = { $ne: excludeId };
+    if (excludeId) {
+      query._id = { $ne: excludeId };
+    }
+
+    const conflict = await Timetable.findOne(query);
+    return conflict;
+  } catch (error) {
+    console.error('Lecturer availability check error:', error);
+    return null;
+  }
+};
+
+// Helper function to check timetable access
+const checkTimetableAccess = async (timetable, user) => {
+  if (!timetable || !user) return false;
+  
+  if (user.role === 'admin') return true;
+  
+  if (user.role === 'student') {
+    // Check if student is in the right year/semester or enrolled in the course
+    if (timetable.yearOfStudy === user.yearOfStudy && 
+        timetable.semester === user.semester &&
+        timetable.department?.toString() === user.department?.toString()) {
+      return true;
+    }
+    
+    // Check if enrolled in any of the courses
+    const enrollments = await Enrollment.find({
+      student: user.id,
+      course: { $in: timetable.courses || [] },
+      enrollmentStatus: 'enrolled'
+    });
+    
+    return enrollments.length > 0;
   }
 
-  const conflict = await Timetable.findOne(query);
-  return conflict;
+  if (user.role === 'lecturer') {
+    return timetable.lecturers?.some(l => l.toString() === user.id);
+  }
+
+  if (user.role === 'hod') {
+    return timetable.department?.toString() === user.department?.toString();
+  }
+
+  if (user.role === 'dean') {
+    return timetable.faculty?.toString() === user.facultyManaged?.toString();
+  }
+
+  return false;
+};
+
+// Helper function to send timetable notifications
+const sendTimetableNotifications = async (timetables, action) => {
+  try {
+    if (!timetables || timetables.length === 0) return;
+    
+    const notificationPromises = [];
+
+    for (const timetable of timetables) {
+      if (!timetable) continue;
+      
+      // Find affected users
+      let targetUsers = [];
+
+      if (timetable.type === 'exam' || timetable.type === 'class') {
+        // Find students in this year/semester/department
+        const studentQuery = {
+          role: 'student',
+          isActive: true
+        };
+        
+        if (timetable.yearOfStudy) studentQuery.yearOfStudy = timetable.yearOfStudy;
+        if (timetable.semester) studentQuery.semester = timetable.semester;
+        if (timetable.department) studentQuery.department = timetable.department;
+        
+        const students = await User.find(studentQuery).select('_id');
+        targetUsers.push(...students.map(s => s._id));
+      }
+
+      // Add lecturers
+      if (timetable.lecturers && timetable.lecturers.length > 0) {
+        targetUsers.push(...timetable.lecturers);
+      }
+
+      // Add HOD
+      if (timetable.department) {
+        const hod = await User.findOne({
+          role: 'hod',
+          department: timetable.department
+        }).select('_id');
+        
+        if (hod) targetUsers.push(hod._id);
+      }
+
+      // Remove duplicates and null values
+      targetUsers = [...new Set(targetUsers.filter(id => id).map(id => id.toString()))];
+
+      if (targetUsers.length === 0) continue;
+
+      // Create notifications
+      const actionMessages = {
+        created: 'has been created',
+        updated: 'has been updated',
+        published: 'has been published',
+        cancelled: 'has been cancelled'
+      };
+
+      const notifications = targetUsers.map(userId => ({
+        user: userId,
+        title: `${timetable.type === 'exam' ? 'Exam' : 'Class'} Schedule ${actionMessages[action] || 'updated'}`,
+        message: `${timetable.title || 'Timetable entry'} scheduled on ${timetable.date ? new Date(timetable.date).toLocaleDateString() : 'TBD'} at ${timetable.startTime || 'TBD'} in ${timetable.venue || 'TBD'}`,
+        type: 'timetable',
+        priority: 'high',
+        metadata: {
+          timetableId: timetable._id,
+          action,
+          type: timetable.type
+        },
+        action: {
+          type: 'link',
+          url: `/timetables/${timetable._id}`
+        }
+      }));
+
+      notificationPromises.push(Notification.insertMany(notifications));
+    }
+
+    await Promise.all(notificationPromises);
+  } catch (error) {
+    console.error('Error sending timetable notifications:', error);
+  }
+};
+
+// Helper function to get student enrolled courses
+const getStudentEnrolledCourses = async (studentId) => {
+  try {
+    if (!studentId) return [];
+    
+    const enrollments = await Enrollment.find({
+      student: studentId,
+      enrollmentStatus: 'enrolled'
+    }).select('course');
+    
+    return enrollments.map(e => e.course).filter(c => c);
+  } catch (error) {
+    console.error('Error getting enrolled courses:', error);
+    return [];
+  }
 };
 
 // @desc    Get all timetables with filters
@@ -81,6 +231,7 @@ exports.getTimetables = async (req, res, next) => {
 
     // Role-based access control
     if (userRole === 'student') {
+      const enrolledCourses = await getStudentEnrolledCourses(userId);
       query.$or = [
         { 
           type: 'exam',
@@ -89,10 +240,10 @@ exports.getTimetables = async (req, res, next) => {
           department: req.user.department
         },
         {
-          type: 'class',
+          type: { $in: ['class', 'lab', 'tutorial'] },
           $or: [
             { yearOfStudy: req.user.yearOfStudy },
-            { courses: { $in: await getStudentEnrolledCourses(userId) } }
+            { courses: { $in: enrolledCourses } }
           ]
         }
       ];
@@ -147,11 +298,13 @@ exports.getTimetables = async (req, res, next) => {
 
     // Group by date for easier display
     const groupedByDate = timetables.reduce((acc, item) => {
-      const dateStr = item.date.toISOString().split('T')[0];
-      if (!acc[dateStr]) {
-        acc[dateStr] = [];
+      if (item.date) {
+        const dateStr = item.date.toISOString().split('T')[0];
+        if (!acc[dateStr]) {
+          acc[dateStr] = [];
+        }
+        acc[dateStr].push(item);
       }
-      acc[dateStr].push(item);
       return acc;
     }, {});
 
@@ -201,7 +354,7 @@ exports.getTimetable = async (req, res, next) => {
     // Get related timetables (same course, same venue)
     const relatedTimetables = await Timetable.find({
       $or: [
-        { courses: { $in: timetable.courses.map(c => c._id) } },
+        { courses: { $in: timetable.courses?.map(c => c._id) || [] } },
         { venue: timetable.venue }
       ],
       _id: { $ne: timetable._id },
@@ -213,7 +366,7 @@ exports.getTimetable = async (req, res, next) => {
 
     // Get enrolled students count for this exam/class
     let enrolledStudents = 0;
-    if (timetable.type === 'exam') {
+    if (timetable.type === 'exam' && timetable.courses && timetable.courses.length > 0) {
       for (const course of timetable.courses) {
         const count = await Enrollment.countDocuments({
           course: course._id,
@@ -223,15 +376,19 @@ exports.getTimetable = async (req, res, next) => {
       }
     }
 
-    res.json({
+    const response = {
       success: true,
-      timetable: {
-        ...timetable.toJSON(),
-        enrolledStudents,
-        availableSeats: timetable.capacity ? timetable.capacity - enrolledStudents : null
-      },
-      relatedTimetables
-    });
+      timetable: timetable.toJSON()
+    };
+    
+    // Add additional data
+    response.timetable.enrolledStudents = enrolledStudents;
+    if (timetable.capacity) {
+      response.timetable.availableSeats = timetable.capacity - enrolledStudents;
+    }
+    response.relatedTimetables = relatedTimetables;
+
+    res.json(response);
   } catch (error) {
     next(error);
   }
@@ -266,13 +423,14 @@ exports.createTimetable = async (req, res, next) => {
     if (!type || !date || !startTime || !endTime || !venue) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Missing required fields' 
+        message: 'Missing required fields: type, date, startTime, endTime, venue' 
       });
     }
 
     // Validate courses if provided
+    let validCourses = [];
     if (courses && courses.length > 0) {
-      const validCourses = await Course.find({ _id: { $in: courses } });
+      validCourses = await Course.find({ _id: { $in: courses } });
       if (validCourses.length !== courses.length) {
         return res.status(400).json({ 
           success: false, 
@@ -282,8 +440,9 @@ exports.createTimetable = async (req, res, next) => {
     }
 
     // Validate lecturers if provided
+    let validLecturers = [];
     if (lecturers && lecturers.length > 0) {
-      const validLecturers = await User.find({ 
+      validLecturers = await User.find({ 
         _id: { $in: lecturers },
         role: { $in: ['lecturer', 'hod', 'dean'] }
       });
@@ -306,7 +465,7 @@ exports.createTimetable = async (req, res, next) => {
           const lecturer = await User.findById(lecturerId);
           return res.status(400).json({ 
             success: false, 
-            message: `Lecturer ${lecturer?.name} is already scheduled at this time` 
+            message: `Lecturer ${lecturer?.name || 'Unknown'} is already scheduled at this time` 
           });
         }
       }
@@ -330,20 +489,21 @@ exports.createTimetable = async (req, res, next) => {
     let deptId = department;
     let facultyId = faculty;
     
-    if (!deptId && courses && courses.length > 0) {
-      const firstCourse = await Course.findById(courses[0]);
-      deptId = firstCourse.department;
-      facultyId = firstCourse.faculty;
+    if (!deptId && validCourses.length > 0) {
+      deptId = validCourses[0].department;
+      facultyId = validCourses[0].faculty;
     }
 
     // Create timetable entries (handle recurrence)
     const createdEntries = [];
     
-    if (recurrence && recurrence.pattern !== 'none') {
+    if (recurrence && recurrence.pattern && recurrence.pattern !== 'none') {
       // Generate recurring entries
       const startDate = new Date(date);
       const endDate = recurrence.endDate ? new Date(recurrence.endDate) : new Date(startDate);
-      endDate.setMonth(endDate.getMonth() + recurrence.months || 3);
+      if (!recurrence.endDate) {
+        endDate.setMonth(endDate.getMonth() + (recurrence.months || 3));
+      }
       
       let currentDate = new Date(startDate);
       let occurrences = 0;
@@ -352,22 +512,25 @@ exports.createTimetable = async (req, res, next) => {
       while (occurrences < maxOccurrences && currentDate <= endDate) {
         const entryData = {
           type,
-          title: recurrence.pattern !== 'none' ? `${title} (Session ${occurrences + 1})` : title,
+          title: recurrence.pattern !== 'none' ? `${title || 'Session'} (Week ${occurrences + 1})` : title,
           description,
           date: new Date(currentDate),
           startTime,
           endTime,
           venue,
           capacity,
-          courses,
-          lecturers,
-          yearOfStudy,
-          semester,
+          courses: validCourses.map(c => c._id),
+          lecturers: validLecturers.map(l => l._id),
+          yearOfStudy: yearOfStudy ? parseInt(yearOfStudy) : undefined,
+          semester: semester ? parseInt(semester) : undefined,
           examType,
           department: deptId,
           faculty: facultyId,
           recurrence: {
-            ...recurrence,
+            pattern: recurrence.pattern,
+            interval: recurrence.interval || 1,
+            endDate: recurrence.endDate,
+            occurrences: recurrence.occurrences,
             parentId: createdEntries[0]?._id || null
           },
           isPublished: isPublished || false,
@@ -376,21 +539,24 @@ exports.createTimetable = async (req, res, next) => {
 
         const entry = await Timetable.create(entryData);
         await entry.populate('courses', 'courseCode courseName');
+        if (validLecturers.length > 0) {
+          await entry.populate('lecturers', 'name email');
+        }
         createdEntries.push(entry);
 
         // Calculate next date based on recurrence pattern
         switch (recurrence.pattern) {
           case 'daily':
-            currentDate.setDate(currentDate.getDate() + 1);
+            currentDate.setDate(currentDate.getDate() + (recurrence.interval || 1));
             break;
           case 'weekly':
-            currentDate.setDate(currentDate.getDate() + 7);
+            currentDate.setDate(currentDate.getDate() + (7 * (recurrence.interval || 1)));
             break;
           case 'biweekly':
-            currentDate.setDate(currentDate.getDate() + 14);
+            currentDate.setDate(currentDate.getDate() + (14 * (recurrence.interval || 1)));
             break;
           case 'monthly':
-            currentDate.setMonth(currentDate.getMonth() + 1);
+            currentDate.setMonth(currentDate.getMonth() + (recurrence.interval || 1));
             break;
           default:
             occurrences = maxOccurrences;
@@ -409,8 +575,8 @@ exports.createTimetable = async (req, res, next) => {
         endTime,
         venue,
         capacity,
-        courses,
-        lecturers,
+        courses: validCourses.map(c => c._id),
+        lecturers: validLecturers.map(l => l._id),
         yearOfStudy: yearOfStudy ? parseInt(yearOfStudy) : undefined,
         semester: semester ? parseInt(semester) : undefined,
         examType,
@@ -422,7 +588,9 @@ exports.createTimetable = async (req, res, next) => {
 
       const entry = await Timetable.create(entryData);
       await entry.populate('courses', 'courseCode courseName');
-      await entry.populate('lecturers', 'name email');
+      if (validLecturers.length > 0) {
+        await entry.populate('lecturers', 'name email');
+      }
       createdEntries.push(entry);
     }
 
@@ -464,8 +632,8 @@ exports.updateTimetable = async (req, res, next) => {
 
     // Check permissions
     const canUpdate = req.user.role === 'admin' || 
-                     (req.user.role === 'hod' && timetable.department.toString() === req.user.department?.toString()) ||
-                     (req.user.role === 'dean' && timetable.faculty.toString() === req.user.facultyManaged?.toString());
+                     (req.user.role === 'hod' && timetable.department?.toString() === req.user.department?.toString()) ||
+                     (req.user.role === 'dean' && timetable.faculty?.toString() === req.user.facultyManaged?.toString());
 
     if (!canUpdate) {
       return res.status(403).json({ 
@@ -482,7 +650,7 @@ exports.updateTimetable = async (req, res, next) => {
         (endTime && endTime !== timetable.endTime) ||
         (venue && venue !== timetable.venue)) {
       
-      const conflictDate = date || timetable.date;
+      const conflictDate = date || timetable.date.toISOString().split('T')[0];
       const conflictStart = startTime || timetable.startTime;
       const conflictEnd = endTime || timetable.endTime;
       const conflictVenue = venue || timetable.venue;
@@ -508,7 +676,7 @@ exports.updateTimetable = async (req, res, next) => {
       for (const lecturerId of lecturers) {
         const conflict = await checkLecturerAvailability(
           lecturerId,
-          date || timetable.date,
+          date || timetable.date.toISOString().split('T')[0],
           startTime || timetable.startTime,
           endTime || timetable.endTime,
           timetable._id
@@ -517,7 +685,7 @@ exports.updateTimetable = async (req, res, next) => {
           const lecturer = await User.findById(lecturerId);
           return res.status(400).json({ 
             success: false, 
-            message: `Lecturer ${lecturer?.name} is already scheduled at this time` 
+            message: `Lecturer ${lecturer?.name || 'Unknown'} is already scheduled at this time` 
           });
         }
       }
@@ -551,7 +719,7 @@ exports.updateTimetable = async (req, res, next) => {
     // If this is a recurring entry, update related entries
     if (timetable.recurrence?.parentId || timetable.recurrence?.pattern !== 'none') {
       const updateRecurring = req.body.updateRecurring;
-      if (updateRecurring === 'all' && timetable.recurrence.parentId) {
+      if (updateRecurring === 'all' && (timetable.recurrence.parentId || timetable._id)) {
         // Find all related entries and update them
         const parentId = timetable.recurrence.parentId || timetable._id;
         await Timetable.updateMany(
@@ -600,8 +768,8 @@ exports.deleteTimetable = async (req, res, next) => {
 
     // Check permissions
     const canDelete = req.user.role === 'admin' || 
-                     (req.user.role === 'hod' && timetable.department.toString() === req.user.department?.toString()) ||
-                     (req.user.role === 'dean' && timetable.faculty.toString() === req.user.facultyManaged?.toString());
+                     (req.user.role === 'hod' && timetable.department?.toString() === req.user.department?.toString()) ||
+                     (req.user.role === 'dean' && timetable.faculty?.toString() === req.user.facultyManaged?.toString());
 
     if (!canDelete) {
       return res.status(403).json({ 
@@ -671,14 +839,16 @@ exports.getTimetablesByDepartment = async (req, res, next) => {
     // Group by type
     const grouped = {
       exams: timetables.filter(t => t.type === 'exam'),
-      classes: timetables.filter(t => t.type === 'class'),
+      classes: timetables.filter(t => ['class', 'lab', 'tutorial'].includes(t.type)),
       events: timetables.filter(t => t.type === 'event')
     };
+
+    const department = await Department.findById(departmentId).select('name code');
 
     res.json({
       success: true,
       count: timetables.length,
-      department: await Department.findById(departmentId).select('name code'),
+      department,
       grouped,
       timetables
     });
@@ -719,9 +889,10 @@ exports.getTimetablesByCourse = async (req, res, next) => {
       .sort({ date: 1, startTime: 1 });
 
     // Group by type
+    const now = new Date();
     const grouped = {
-      upcoming: timetables.filter(t => new Date(t.date) >= new Date()),
-      past: timetables.filter(t => new Date(t.date) < new Date())
+      upcoming: timetables.filter(t => new Date(t.date) >= now),
+      past: timetables.filter(t => new Date(t.date) < now)
     };
 
     res.json({
@@ -777,19 +948,25 @@ exports.getTimetablesByLecturer = async (req, res, next) => {
       .sort({ date: 1, startTime: 1 });
 
     // Calculate workload statistics
+    const now = new Date();
+    const totalHours = timetables.reduce((acc, t) => {
+      if (t.startTime && t.endTime) {
+        const start = t.startTime.split(':').map(Number);
+        const end = t.endTime.split(':').map(Number);
+        const hours = (end[0] - start[0]) + (end[1] - start[1]) / 60;
+        return acc + (hours > 0 ? hours : 0);
+      }
+      return acc;
+    }, 0);
+
     const stats = {
       total: timetables.length,
       byType: timetables.reduce((acc, t) => {
         acc[t.type] = (acc[t.type] || 0) + 1;
         return acc;
       }, {}),
-      upcomingCount: timetables.filter(t => new Date(t.date) >= new Date()).length,
-      totalHours: timetables.reduce((acc, t) => {
-        const start = t.startTime.split(':').map(Number);
-        const end = t.endTime.split(':').map(Number);
-        const hours = (end[0] - start[0]) + (end[1] - start[1]) / 60;
-        return acc + hours;
-      }, 0).toFixed(1)
+      upcomingCount: timetables.filter(t => new Date(t.date) >= now).length,
+      totalHours: totalHours.toFixed(1)
     };
 
     res.json({
@@ -828,13 +1005,14 @@ exports.getTimetablesByDate = async (req, res, next) => {
 
     // Role-based filters
     if (req.user.role === 'student') {
+      const enrolledCourses = await getStudentEnrolledCourses(req.user.id);
       query.$or = [
         { 
           yearOfStudy: req.user.yearOfStudy,
           semester: req.user.semester,
           department: req.user.department
         },
-        { courses: { $in: await getStudentEnrolledCourses(req.user.id) } }
+        { courses: { $in: enrolledCourses } }
       ];
     } else if (req.user.role === 'lecturer') {
       query.lecturers = req.user.id;
@@ -884,13 +1062,14 @@ exports.getWeeklyTimetable = async (req, res, next) => {
 
     // Role-based filters
     if (req.user.role === 'student') {
+      const enrolledCourses = await getStudentEnrolledCourses(req.user.id);
       query.$or = [
         { 
           yearOfStudy: req.user.yearOfStudy,
           semester: req.user.semester,
           department: req.user.department
         },
-        { courses: { $in: await getStudentEnrolledCourses(req.user.id) } }
+        { courses: { $in: enrolledCourses } }
       ];
     } else if (req.user.role === 'lecturer') {
       query.lecturers = req.user.id;
@@ -914,8 +1093,12 @@ exports.getWeeklyTimetable = async (req, res, next) => {
     });
 
     timetables.forEach(item => {
-      const dayName = weekDays[item.date.getDay()];
-      groupedByDay[dayName].push(item);
+      if (item.date) {
+        const dayName = weekDays[item.date.getDay()];
+        if (groupedByDay[dayName]) {
+          groupedByDay[dayName].push(item);
+        }
+      }
     });
 
     res.json({
@@ -973,11 +1156,13 @@ exports.getUpcomingExams = async (req, res, next) => {
 
     // Group by date
     const groupedByDate = exams.reduce((acc, exam) => {
-      const dateStr = exam.date.toISOString().split('T')[0];
-      if (!acc[dateStr]) {
-        acc[dateStr] = [];
+      if (exam.date) {
+        const dateStr = exam.date.toISOString().split('T')[0];
+        if (!acc[dateStr]) {
+          acc[dateStr] = [];
+        }
+        acc[dateStr].push(exam);
       }
-      acc[dateStr].push(exam);
       return acc;
     }, {});
 
@@ -990,7 +1175,9 @@ exports.getUpcomingExams = async (req, res, next) => {
         return acc;
       }, {}),
       byVenue: exams.reduce((acc, e) => {
-        acc[e.venue] = (acc[e.venue] || 0) + 1;
+        if (e.venue) {
+          acc[e.venue] = (acc[e.venue] || 0) + 1;
+        }
         return acc;
       }, {})
     };
@@ -1039,11 +1226,13 @@ exports.getTimetableConflicts = async (req, res, next) => {
     // Check venue conflicts
     const venueMap = {};
     timetables.forEach(item => {
-      const key = `${item.date.toISOString().split('T')[0]}_${item.venue}_${item.startTime}-${item.endTime}`;
-      if (!venueMap[key]) {
-        venueMap[key] = [];
+      if (item.date && item.venue && item.startTime && item.endTime) {
+        const key = `${item.date.toISOString().split('T')[0]}_${item.venue}_${item.startTime}-${item.endTime}`;
+        if (!venueMap[key]) {
+          venueMap[key] = [];
+        }
+        venueMap[key].push(item);
       }
-      venueMap[key].push(item);
     });
 
     Object.values(venueMap).forEach(items => {
@@ -1059,13 +1248,17 @@ exports.getTimetableConflicts = async (req, res, next) => {
     // Check lecturer conflicts
     const lecturerMap = {};
     timetables.forEach(item => {
-      item.lecturers.forEach(lecturerId => {
-        const key = `${item.date.toISOString().split('T')[0]}_${lecturerId}_${item.startTime}-${item.endTime}`;
-        if (!lecturerMap[key]) {
-          lecturerMap[key] = [];
-        }
-        lecturerMap[key].push(item);
-      });
+      if (item.date && item.lecturers && item.startTime && item.endTime) {
+        item.lecturers.forEach(lecturerId => {
+          if (lecturerId) {
+            const key = `${item.date.toISOString().split('T')[0]}_${lecturerId}_${item.startTime}-${item.endTime}`;
+            if (!lecturerMap[key]) {
+              lecturerMap[key] = [];
+            }
+            lecturerMap[key].push(item);
+          }
+        });
+      }
     });
 
     Object.values(lecturerMap).forEach(items => {
@@ -1136,6 +1329,13 @@ exports.importTimetable = async (req, res, next) => {
     await workbook.xlsx.readFile(req.file.path);
     
     const worksheet = workbook.getWorksheet(1);
+    if (!worksheet) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid Excel file' 
+      });
+    }
+
     const rows = [];
 
     worksheet.eachRow((row, rowNumber) => {
@@ -1147,10 +1347,10 @@ exports.importTimetable = async (req, res, next) => {
           startTime: row.getCell(4).value,
           endTime: row.getCell(5).value,
           venue: row.getCell(6).value,
-          courseCode: row.getCell(7).value,
-          lecturerId: row.getCell(8).value,
-          yearOfStudy: row.getCell(9).value,
-          semester: row.getCell(10).value
+          courseCode: row.getCell(7)?.value,
+          lecturerId: row.getCell(8)?.value,
+          yearOfStudy: row.getCell(9)?.value,
+          semester: row.getCell(10)?.value
         });
       }
     });
@@ -1162,23 +1362,35 @@ exports.importTimetable = async (req, res, next) => {
 
     for (const row of rows) {
       try {
-        // Find course
-        const course = await Course.findOne({ courseCode: row.courseCode });
-        if (!course) {
-          results.failed.push({ row, reason: `Course ${row.courseCode} not found` });
+        // Validate required fields
+        if (!row.type || !row.date || !row.startTime || !row.endTime || !row.venue) {
+          results.failed.push({ row, reason: 'Missing required fields' });
           continue;
         }
 
+        // Find course
+        let course = null;
+        if (row.courseCode) {
+          course = await Course.findOne({ courseCode: row.courseCode });
+          if (!course) {
+            results.failed.push({ row, reason: `Course ${row.courseCode} not found` });
+            continue;
+          }
+        }
+
         // Find lecturer
-        const lecturer = await User.findOne({ 
-          $or: [
-            { employeeId: row.lecturerId },
-            { email: row.lecturerId }
-          ]
-        });
-        if (!lecturer) {
-          results.failed.push({ row, reason: `Lecturer ${row.lecturerId} not found` });
-          continue;
+        let lecturer = null;
+        if (row.lecturerId) {
+          lecturer = await User.findOne({ 
+            $or: [
+              { employeeId: row.lecturerId },
+              { email: row.lecturerId }
+            ]
+          });
+          if (!lecturer) {
+            results.failed.push({ row, reason: `Lecturer ${row.lecturerId} not found` });
+            continue;
+          }
         }
 
         // Check for conflicts
@@ -1197,17 +1409,17 @@ exports.importTimetable = async (req, res, next) => {
         // Create timetable entry
         const timetable = await Timetable.create({
           type: row.type,
-          title: row.title,
+          title: row.title || `${row.type} session`,
           date: new Date(row.date),
           startTime: row.startTime,
           endTime: row.endTime,
           venue: row.venue,
-          courses: [course._id],
-          lecturers: [lecturer._id],
-          yearOfStudy: parseInt(row.yearOfStudy),
-          semester: parseInt(row.semester),
-          department: course.department,
-          faculty: course.faculty,
+          courses: course ? [course._id] : [],
+          lecturers: lecturer ? [lecturer._id] : [],
+          yearOfStudy: row.yearOfStudy ? parseInt(row.yearOfStudy) : undefined,
+          semester: row.semester ? parseInt(row.semester) : undefined,
+          department: course?.department,
+          faculty: course?.faculty,
           createdBy: req.user.id
         });
 
@@ -1218,7 +1430,11 @@ exports.importTimetable = async (req, res, next) => {
     }
 
     // Clean up uploaded file
-    fs.unlinkSync(req.file.path);
+    try {
+      fs.unlinkSync(req.file.path);
+    } catch (err) {
+      console.error('Error deleting uploaded file:', err);
+    }
 
     res.json({
       success: true,
@@ -1226,6 +1442,14 @@ exports.importTimetable = async (req, res, next) => {
       results
     });
   } catch (error) {
+    // Clean up uploaded file if error occurs
+    if (req.file && req.file.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (err) {
+        console.error('Error deleting uploaded file:', err);
+      }
+    }
     next(error);
   }
 };
@@ -1268,21 +1492,23 @@ exports.exportTimetable = async (req, res, next) => {
       { header: 'Course(s)', key: 'courses', width: 30 },
       { header: 'Lecturer(s)', key: 'lecturers', width: 30 },
       { header: 'Department', key: 'department', width: 20 },
-      { header: 'Year/Semester', key: 'yearSemester', width: 15 }
+      { header: 'Year/Semester', key: 'yearSemester', width: 15 },
+      { header: 'Status', key: 'status', width: 15 }
     ];
 
     timetables.forEach(item => {
       worksheet.addRow({
         type: item.type,
-        title: item.title,
-        date: item.date.toLocaleDateString(),
-        startTime: item.startTime,
-        endTime: item.endTime,
-        venue: item.venue,
-        courses: item.courses.map(c => c.courseCode).join(', '),
-        lecturers: item.lecturers.map(l => l.name).join(', '),
-        department: item.department?.name,
-        yearSemester: item.yearOfStudy ? `Y${item.yearOfStudy}S${item.semester}` : '-'
+        title: item.title || '',
+        date: item.date ? item.date.toLocaleDateString() : '',
+        startTime: item.startTime || '',
+        endTime: item.endTime || '',
+        venue: item.venue || '',
+        courses: item.courses?.map(c => c.courseCode).join(', ') || '',
+        lecturers: item.lecturers?.map(l => l.name).join(', ') || '',
+        department: item.department?.name || '',
+        yearSemester: item.yearOfStudy ? `Y${item.yearOfStudy}S${item.semester}` : '-',
+        status: item.status || 'scheduled'
       });
     });
 
@@ -1301,116 +1527,3 @@ exports.exportTimetable = async (req, res, next) => {
     next(error);
   }
 };
-
-// Helper function to check timetable access
-const checkTimetableAccess = async (timetable, user) => {
-  if (user.role === 'admin') return true;
-  
-  if (user.role === 'student') {
-    // Check if student is in the right year/semester or enrolled in the course
-    if (timetable.yearOfStudy === user.yearOfStudy && 
-        timetable.semester === user.semester &&
-        timetable.department.toString() === user.department?.toString()) {
-      return true;
-    }
-    
-    // Check if enrolled in any of the courses
-    const enrollments = await Enrollment.find({
-      student: user.id,
-      course: { $in: timetable.courses },
-      enrollmentStatus: 'enrolled'
-    });
-    
-    return enrollments.length > 0;
-  }
-
-  if (user.role === 'lecturer') {
-    return timetable.lecturers.some(l => l.toString() === user.id);
-  }
-
-  if (user.role === 'hod') {
-    return timetable.department?.toString() === user.department?.toString();
-  }
-
-  if (user.role === 'dean') {
-    return timetable.faculty?.toString() === user.facultyManaged?.toString();
-  }
-
-  return false;
-};
-
-// Helper function to send timetable notifications
-const sendTimetableNotifications = async (timetables, action) => {
-  const notificationPromises = [];
-
-  for (const timetable of timetables) {
-    // Find affected users
-    let targetUsers = [];
-
-    if (timetable.type === 'exam') {
-      // Find students in this year/semester
-      const students = await User.find({
-        role: 'student',
-        yearOfStudy: timetable.yearOfStudy,
-        semester: timetable.semester,
-        department: timetable.department,
-        isActive: true
-      }).select('_id');
-      
-      targetUsers.push(...students.map(s => s._id));
-    }
-
-    // Add lecturers
-    targetUsers.push(...timetable.lecturers);
-
-    // Add HOD
-    const hod = await User.findOne({
-      role: 'hod',
-      department: timetable.department
-    }).select('_id');
-    
-    if (hod) targetUsers.push(hod._id);
-
-    // Remove duplicates
-    targetUsers = [...new Set(targetUsers.map(id => id.toString()))];
-
-    // Create notifications
-    const actionMessages = {
-      created: 'has been created',
-      updated: 'has been updated',
-      published: 'has been published'
-    };
-
-    const notifications = targetUsers.map(userId => ({
-      user: userId,
-      title: `${timetable.type === 'exam' ? 'Exam' : 'Class'} Schedule ${actionMessages[action]}`,
-      message: `${timetable.title} scheduled on ${timetable.date.toLocaleDateString()} at ${timetable.startTime} in ${timetable.venue}`,
-      type: 'timetable',
-      priority: 'high',
-      metadata: {
-        timetableId: timetable._id,
-        action,
-        type: timetable.type
-      },
-      action: {
-        type: 'link',
-        url: `/timetables/${timetable._id}`
-      }
-    }));
-
-    notificationPromises.push(Notification.insertMany(notifications));
-  }
-
-  await Promise.all(notificationPromises);
-};
-
-// Helper function to get student enrolled courses
-const getStudentEnrolledCourses = async (studentId) => {
-  const enrollments = await Enrollment.find({
-    student: studentId,
-    enrollmentStatus: 'enrolled'
-  }).select('course');
-  
-  return enrollments.map(e => e.course);
-};
-

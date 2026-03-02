@@ -1,8 +1,9 @@
-const Course = require('../models/subject');
+const Course = require('../models/course');
 const User = require('../models/user');
 const Department = require('../models/Department');
 const Enrollment = require('../models/Enrollment');
 const Notification = require('../models/notification');
+const mongoose = require('mongoose');
 
 // @desc    Get all courses
 // @route   GET /api/courses
@@ -25,6 +26,7 @@ exports.getCourses = async (req, res, next) => {
 
     let query = {};
     const userRole = req.user.role;
+    const userId = req.user._id;
 
     // Role-based access control
     if (userRole === 'hod') {
@@ -32,7 +34,7 @@ exports.getCourses = async (req, res, next) => {
     } else if (userRole === 'dean') {
       query.faculty = req.user.facultyManaged;
     } else if (userRole === 'lecturer') {
-      query.lecturers = req.user._id;
+      query.lecturers = userId;
     } else if (userRole === 'student') {
       // Students see active courses
       query.isActive = true;
@@ -87,7 +89,7 @@ exports.getCourses = async (req, res, next) => {
           ...course.toJSON(),
           enrolledStudents: enrolledCount,
           completedStudents: completedCount,
-          availableSeats: course.maxStudents - enrolledCount
+          availableSeats: course.maxStudents ? course.maxStudents - enrolledCount : null
         };
       })
     );
@@ -200,7 +202,7 @@ exports.createCourse = async (req, res, next) => {
     } else if (req.user.role === 'dean') {
       // Dean can only create courses in their faculty
       const dept = await Department.findById(department);
-      if (dept.faculty.toString() !== req.user.facultyManaged?.toString()) {
+      if (!dept || dept.faculty?.toString() !== req.user.facultyManaged?.toString()) {
         return res.status(403).json({ 
           success: false, 
           message: 'Access denied. You can only create courses in your faculty.' 
@@ -290,7 +292,7 @@ exports.updateCourse = async (req, res, next) => {
 
     // Check permissions
     const userRole = req.user.role;
-    if (userRole === 'hod' && course.department.toString() !== req.user.department?.toString()) {
+    if (userRole === 'hod' && course.department?.toString() !== req.user.department?.toString()) {
       return res.status(403).json({ 
         success: false, 
         message: 'Access denied. You can only update courses in your department.' 
@@ -299,7 +301,7 @@ exports.updateCourse = async (req, res, next) => {
 
     if (userRole === 'dean') {
       const dept = await Department.findById(course.department);
-      if (dept.faculty.toString() !== req.user.facultyManaged?.toString()) {
+      if (!dept || dept.faculty?.toString() !== req.user.facultyManaged?.toString()) {
         return res.status(403).json({ 
           success: false, 
           message: 'Access denied. You can only update courses in your faculty.' 
@@ -332,9 +334,13 @@ exports.updateCourse = async (req, res, next) => {
 
     // If lecturers array is updated, update their coursesTaught
     if (req.body.lecturers) {
+      // Ensure req.body.lecturers is an array of strings
+      const newLecturersArray = req.body.lecturers.map(l => l.toString());
+      const oldLecturersArray = (course.lecturers || []).map(l => l.toString());
+      
       // Remove course from lecturers no longer teaching
-      const removedLecturers = course.lecturers.filter(
-        l => !req.body.lecturers.includes(l.toString())
+      const removedLecturers = oldLecturersArray.filter(
+        l => !newLecturersArray.includes(l)
       );
       
       for (const lecturerId of removedLecturers) {
@@ -344,11 +350,11 @@ exports.updateCourse = async (req, res, next) => {
       }
 
       // Add course to new lecturers
-      const newLecturers = req.body.lecturers.filter(
-        l => !course.lecturers.map(cl => cl.toString()).includes(l)
+      const addedLecturers = newLecturersArray.filter(
+        l => !oldLecturersArray.includes(l)
       );
 
-      for (const lecturerId of newLecturers) {
+      for (const lecturerId of addedLecturers) {
         await User.findByIdAndUpdate(lecturerId, {
           $addToSet: { coursesTaught: course._id }
         });
@@ -471,15 +477,17 @@ exports.getCoursesByDepartment = async (req, res, next) => {
         return {
           ...course.toJSON(),
           enrolledStudents: enrolledCount,
-          availableSeats: course.maxStudents - enrolledCount
+          availableSeats: course.maxStudents ? course.maxStudents - enrolledCount : null
         };
       })
     );
 
+    const department = await Department.findById(departmentId).select('name code');
+
     res.json({
       success: true,
       count: courses.length,
-      department: await Department.findById(departmentId).select('name code'),
+      department,
       courses: coursesWithStats
     });
   } catch (error) {
@@ -566,6 +574,13 @@ exports.assignLecturer = async (req, res, next) => {
   try {
     const { lecturerId, role } = req.body; // role can be 'coordinator', 'lecturer', 'ta'
 
+    if (!lecturerId || !role) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide lecturerId and role'
+      });
+    }
+
     const course = await Course.findById(req.params.id);
     if (!course) {
       return res.status(404).json({ 
@@ -575,7 +590,7 @@ exports.assignLecturer = async (req, res, next) => {
     }
 
     // Check permissions
-    if (req.user.role === 'hod' && course.department.toString() !== req.user.department?.toString()) {
+    if (req.user.role === 'hod' && course.department?.toString() !== req.user.department?.toString()) {
       return res.status(403).json({ 
         success: false, 
         message: 'Access denied. You can only assign lecturers to courses in your department.' 
@@ -584,7 +599,7 @@ exports.assignLecturer = async (req, res, next) => {
 
     if (req.user.role === 'dean') {
       const dept = await Department.findById(course.department);
-      if (dept.faculty.toString() !== req.user.facultyManaged?.toString()) {
+      if (!dept || dept.faculty?.toString() !== req.user.facultyManaged?.toString()) {
         return res.status(403).json({ 
           success: false, 
           message: 'Access denied. You can only assign lecturers to courses in your faculty.' 
@@ -627,14 +642,16 @@ exports.assignLecturer = async (req, res, next) => {
       default:
         return res.status(400).json({ 
           success: false, 
-          message: 'Invalid role' 
+          message: 'Invalid role. Use coordinator, lecturer, or ta' 
         });
     }
 
-    // Add course to lecturer's coursesTaught
-    await User.findByIdAndUpdate(lecturerId, {
-      $addToSet: { coursesTaught: course._id }
-    });
+    // Add course to lecturer's coursesTaught (for lecturers and coordinators)
+    if (role !== 'ta') {
+      await User.findByIdAndUpdate(lecturerId, {
+        $addToSet: { coursesTaught: course._id }
+      });
+    }
 
     const updatedCourse = await Course.findByIdAndUpdate(
       course._id, 
@@ -671,7 +688,7 @@ exports.removeLecturer = async (req, res, next) => {
     }
 
     // Check permissions
-    if (req.user.role === 'hod' && course.department.toString() !== req.user.department?.toString()) {
+    if (req.user.role === 'hod' && course.department?.toString() !== req.user.department?.toString()) {
       return res.status(403).json({ 
         success: false, 
         message: 'Access denied. You can only remove lecturers from courses in your department.' 
@@ -717,7 +734,7 @@ exports.updateCourseStatus = async (req, res, next) => {
     if (!['open', 'closed', 'waitlist'].includes(status)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Invalid status' 
+        message: 'Invalid status. Use open, closed, or waitlist' 
       });
     }
 
@@ -730,7 +747,7 @@ exports.updateCourseStatus = async (req, res, next) => {
     }
 
     // Check permissions
-    if (req.user.role === 'hod' && course.department.toString() !== req.user.department?.toString()) {
+    if (req.user.role === 'hod' && course.department?.toString() !== req.user.department?.toString()) {
       return res.status(403).json({ 
         success: false, 
         message: 'Access denied. You can only update courses in your department.' 
@@ -749,18 +766,20 @@ exports.updateCourseStatus = async (req, res, next) => {
       }).populate('student');
 
       for (const enrollment of enrollments) {
-        await Notification.create({
-          user: enrollment.student._id,
-          title: 'Course Enrollment Closed',
-          message: `Enrollment for ${course.courseCode} - ${course.courseName} is now closed.`,
-          type: 'course',
-          priority: 'high',
-          sender: req.user.id,
-          relatedEntity: {
-            entityType: 'Course',
-            entity: course._id
-          }
-        });
+        if (enrollment.student) {
+          await Notification.create({
+            user: enrollment.student._id,
+            title: 'Course Enrollment Closed',
+            message: `Enrollment for ${course.courseCode} - ${course.courseName} is now closed.`,
+            type: 'course',
+            priority: 'high',
+            sender: req.user.id,
+            metadata: {
+              courseId: course._id,
+              courseCode: course.courseCode
+            }
+          });
+        }
       }
     }
 
@@ -791,7 +810,7 @@ exports.getCourseEnrollments = async (req, res, next) => {
     }
 
     // Check access
-    const isLecturer = course.lecturers.some(l => l.toString() === req.user.id);
+    const isLecturer = course.lecturers?.some(l => l.toString() === req.user.id);
     const isCoordinator = course.coordinator?.toString() === req.user.id;
     
     if (!['admin', 'hod', 'dean'].includes(req.user.role) && !isLecturer && !isCoordinator) {
@@ -859,6 +878,15 @@ exports.bulkCreateCourses = async (req, res, next) => {
 
     for (const courseData of courses) {
       try {
+        // Check required fields
+        if (!courseData.courseCode || !courseData.courseName || !courseData.department) {
+          results.failed.push({
+            data: courseData,
+            reason: 'Missing required fields: courseCode, courseName, department'
+          });
+          continue;
+        }
+
         // Check if course code exists
         const existing = await Course.findOne({ courseCode: courseData.courseCode });
         if (existing) {
@@ -879,10 +907,22 @@ exports.bulkCreateCourses = async (req, res, next) => {
           continue;
         }
 
+        // Set academic year if not provided
+        if (!courseData.academicYear) {
+          const currentYear = new Date().getFullYear();
+          courseData.academicYear = `${currentYear}/${currentYear + 1}`;
+        }
+
         courseData.faculty = department.faculty;
         courseData.createdBy = req.user.id;
 
         const course = await Course.create(courseData);
+        
+        // Add course to department's courses list
+        await Department.findByIdAndUpdate(department._id, {
+          $addToSet: { courses: course._id }
+        });
+
         results.successful.push(course);
       } catch (error) {
         results.failed.push({
@@ -945,16 +985,31 @@ exports.getCourseStats = async (req, res, next) => {
     stats.inactive = await Course.countDocuments({ ...query, isActive: false });
 
     // Department-wise stats
-    const departments = await Department.find(
-      req.user.role === 'hod' ? { _id: req.user.department } : 
-      req.user.role === 'dean' ? { faculty: req.user.facultyManaged } : {}
-    );
+    let departmentQuery = {};
+    if (req.user.role === 'hod') {
+      departmentQuery._id = req.user.department;
+    } else if (req.user.role === 'dean') {
+      departmentQuery.faculty = req.user.facultyManaged;
+    }
+    
+    const departments = await Department.find(departmentQuery);
 
     for (const dept of departments) {
-      stats.byDepartment[dept.name] = await Course.countDocuments({ 
+      const deptCourses = await Course.find({ 
         ...query, 
         department: dept._id 
-      });
+      }).select('_id');
+      
+      const courseIds = deptCourses.map(c => c._id);
+      
+      stats.byDepartment[dept.code || dept.name] = {
+        name: dept.name,
+        total: deptCourses.length,
+        enrollments: await Enrollment.countDocuments({
+          course: { $in: courseIds },
+          enrollmentStatus: 'enrolled'
+        })
+      };
     }
 
     // Get total enrolled students across all courses
@@ -965,6 +1020,19 @@ exports.getCourseStats = async (req, res, next) => {
       course: { $in: courseIds },
       enrollmentStatus: 'enrolled'
     });
+
+    // Get average class size
+    if (courses.length > 0) {
+      const enrollmentsPerCourse = await Enrollment.aggregate([
+        { $match: { course: { $in: courseIds }, enrollmentStatus: 'enrolled' } },
+        { $group: { _id: '$course', count: { $sum: 1 } } }
+      ]);
+      
+      const totalEnrollments = enrollmentsPerCourse.reduce((sum, item) => sum + item.count, 0);
+      stats.averageClassSize = Math.round(totalEnrollments / courses.length);
+    } else {
+      stats.averageClassSize = 0;
+    }
 
     res.json({
       success: true,
@@ -998,7 +1066,7 @@ exports.getCourseTimetable = async (req, res, next) => {
       enrollmentStatus: 'enrolled'
     });
 
-    const isLecturer = course.lecturers.some(l => l.toString() === req.user.id);
+    const isLecturer = course.lecturers?.some(l => l._id.toString() === req.user.id);
     
     if (!['admin', 'hod', 'dean'].includes(req.user.role) && !isLecturer && !isEnrolled) {
       return res.status(403).json({ 
@@ -1006,6 +1074,15 @@ exports.getCourseTimetable = async (req, res, next) => {
         message: 'Access denied. You are not enrolled in this course.' 
       });
     }
+
+    // Get timetable entries for this course
+    const Timetable = require('../models/timetable');
+    const timetableEntries = await Timetable.find({
+      courses: course._id,
+      date: { $gte: new Date() }
+    })
+    .populate('lecturers', 'name')
+    .sort('date startTime');
 
     const timetable = {
       course: {
@@ -1022,7 +1099,8 @@ exports.getCourseTimetable = async (req, res, next) => {
         tutorialHours: course.tutorialHours || 'TBD',
         practicalHours: course.practicalHours || 'TBD'
       },
-      assessment: course.assessmentStructure
+      assessment: course.assessmentStructure || {},
+      upcomingSessions: timetableEntries
     };
 
     res.json({

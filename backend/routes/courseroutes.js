@@ -17,7 +17,7 @@ const {
   bulkCreateCourses,
   getCourseStats,
   getCourseTimetable
-} = courseController = require('../controllers/subjectcontroller');
+} = courseController = require('../controllers/coursecontroller');
 
 // All routes require authentication
 router.use(protect);

@@ -1,12 +1,89 @@
-// controllers/fileController.js
 const File = require('../models/file');
-const Course = require('../models/subject');
+const Course = require('../models/course');
 const User = require('../models/user');
 const Department = require('../models/Department');
 const Enrollment = require('../models/Enrollment');
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
+
+// Helper function to check file access
+const checkFileAccess = async (file, user) => {
+  if (!file || !user) return false;
+  
+  // Admin and registrar have full access
+  if (user.role === 'admin' || user.role === 'registrar') return true;
+  
+  // HOD access
+  if (user.role === 'hod' && file.department?.toString() === user.department?.toString()) {
+    return true;
+  }
+
+  // Dean access
+  if (user.role === 'dean' && file.faculty?.toString() === user.facultyManaged?.toString()) {
+    return true;
+  }
+
+  // Uploader always has access
+  if (file.uploadedBy?.toString() === user.id) return true;
+
+  // Check if user is a lecturer for this course
+  if (file.course) {
+    const course = await Course.findById(file.course);
+    if (course && course.lecturers?.some(l => l?.toString() === user.id)) {
+      return true;
+    }
+  }
+
+  // Check if user is a student
+  if (user.role === 'student') {
+    // Check if file is public
+    if (file.isPublic) {
+      // Check if student is enrolled in the course
+      if (file.course) {
+        const isEnrolled = await Enrollment.exists({
+          student: user.id,
+          course: file.course,
+          enrollmentStatus: 'enrolled'
+        });
+
+        if (isEnrolled) return true;
+      }
+
+      // Check department access
+      if (file.accessControl?.allowedDepartments?.includes(user.department)) {
+        return true;
+      }
+
+      // Check year and semester
+      if (file.yearOfStudy && file.yearOfStudy === user.yearOfStudy) {
+        if (!file.semester || file.semester === user.semester) {
+          return true;
+        }
+      }
+    }
+
+    // Check custom access control
+    if (file.accessControl) {
+      const { allowedRoles, allowedDepartments, allowedYears, allowedSemesters } = file.accessControl;
+      
+      if (allowedRoles?.includes('student')) {
+        // Check department
+        if (!allowedDepartments?.length || allowedDepartments.includes(user.department)) {
+          // Check year
+          if (!allowedYears?.length || allowedYears.includes(user.yearOfStudy)) {
+            // Check semester
+            if (!allowedSemesters?.length || allowedSemesters.includes(user.semester)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+};
 
 // @desc    Upload file
 // @route   POST /api/files/upload
@@ -34,9 +111,11 @@ exports.uploadFile = async (req, res, next) => {
     const course = await Course.findById(courseId);
     if (!course) {
       // Delete uploaded file
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error('Error deleting file:', err);
-      });
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (err) {
+        console.error('Error deleting file:', err);
+      }
       return res.status(404).json({ 
         success: false, 
         message: 'Course not found' 
@@ -45,13 +124,15 @@ exports.uploadFile = async (req, res, next) => {
 
     // Check permissions
     const userRole = req.user.role;
-    const isLecturer = course.lecturers.some(l => l.toString() === req.user.id);
+    const isLecturer = course.lecturers?.some(l => l?.toString() === req.user.id);
     
     if (!['admin', 'hod', 'dean'].includes(userRole) && !isLecturer) {
       // Delete uploaded file
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error('Error deleting file:', err);
-      });
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (err) {
+        console.error('Error deleting file:', err);
+      }
       return res.status(403).json({ 
         success: false, 
         message: 'Access denied. You can only upload files for courses you teach.' 
@@ -98,10 +179,10 @@ exports.uploadFile = async (req, res, next) => {
       mimeType: req.file.mimetype,
       fileType: fileType || 'lecture_notes',
       course: courseId,
-      yearOfStudy: parseInt(yearOfStudy) || null,
-      semester: parseInt(semester) || null,
+      yearOfStudy: yearOfStudy ? parseInt(yearOfStudy) : null,
+      semester: semester ? parseInt(semester) : null,
       description,
-      tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
+      tags: tags ? (Array.isArray(tags) ? tags : tags.split(',').map(tag => tag.trim())) : [],
       isPublic,
       uploadedBy: req.user.id,
       department: course.department,
@@ -127,10 +208,10 @@ exports.uploadFile = async (req, res, next) => {
       const enrollments = await Enrollment.find({
         course: courseId,
         enrollmentStatus: 'enrolled'
-      }).populate('student', 'email');
+      }).populate('student');
 
       // Queue notification emails (implement background job)
-      const studentEmails = enrollments.map(e => e.student.email);
+      // const studentEmails = enrollments.map(e => e.student?.email).filter(email => email);
       // await notificationService.sendFileUploadNotification(file, studentEmails);
     }
 
@@ -142,9 +223,11 @@ exports.uploadFile = async (req, res, next) => {
   } catch (error) {
     // Delete uploaded file if database operation fails
     if (req.file && req.file.path) {
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error('Error deleting file:', err);
-      });
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (err) {
+        console.error('Error deleting file:', err);
+      }
     }
     next(error);
   }
@@ -182,7 +265,7 @@ exports.getFiles = async (req, res, next) => {
         enrollmentStatus: 'enrolled'
       }).select('course');
       
-      const enrolledCourseIds = enrollments.map(e => e.course);
+      const enrolledCourseIds = enrollments.map(e => e.course).filter(id => id);
       
       query.$or = [
         { 
@@ -247,16 +330,29 @@ exports.getFiles = async (req, res, next) => {
     if (isPublic !== undefined) query.isPublic = isPublic === 'true';
 
     if (search) {
-      query.$and = [
-        query.$and || [],
-        {
-          $or: [
-            { originalName: { $regex: search, $options: 'i' } },
-            { description: { $regex: search, $options: 'i' } },
-            { tags: { $in: [new RegExp(search, 'i')] } }
-          ]
-        }
-      ];
+      // Handle search with proper $and/$or combination
+      const searchRegex = new RegExp(search, 'i');
+      const searchCondition = {
+        $or: [
+          { originalName: searchRegex },
+          { description: searchRegex },
+          { tags: { $in: [searchRegex] } }
+        ]
+      };
+      
+      if (query.$and) {
+        query.$and.push(searchCondition);
+      } else if (query.$or) {
+        // Wrap existing $or with $and to combine with search
+        query = {
+          $and: [query, searchCondition]
+        };
+      } else {
+        query = {
+          ...query,
+          ...searchCondition
+        };
+      }
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -273,11 +369,14 @@ exports.getFiles = async (req, res, next) => {
     const total = await File.countDocuments(query);
 
     // Get additional stats for each file
-    const filesWithStats = files.map(file => ({
-      ...file.toJSON(),
-      downloadUrl: `/api/files/download/${file._id}`,
-      preview: file.mimeType.startsWith('image/') ? file.path : null
-    }));
+    const filesWithStats = files.map(file => {
+      const fileObj = file.toJSON();
+      return {
+        ...fileObj,
+        downloadUrl: `/api/files/download/${file._id}`,
+        preview: file.mimeType?.startsWith('image/') ? `/uploads/${file.filename}` : null
+      };
+    });
 
     res.json({
       success: true,
@@ -335,7 +434,7 @@ exports.getFile = async (req, res, next) => {
       file,
       relatedFiles,
       downloadUrl: `/api/files/download/${file._id}`,
-      preview: file.mimeType.startsWith('image/') ? file.path : null
+      preview: file.mimeType?.startsWith('image/') ? `/uploads/${file.filename}` : null
     });
   } catch (error) {
     next(error);
@@ -374,11 +473,12 @@ exports.downloadFile = async (req, res, next) => {
     }
 
     // Increment download count and track who downloaded
-    file.downloads += 1;
+    file.downloads = (file.downloads || 0) + 1;
+    if (!file.downloadHistory) file.downloadHistory = [];
     file.downloadHistory.push({
       user: req.user.id,
       downloadedAt: new Date(),
-      ipAddress: req.ip
+      ipAddress: req.ip || req.connection.remoteAddress
     });
     await file.save();
 
@@ -407,9 +507,9 @@ exports.updateFile = async (req, res, next) => {
 
     // Check permissions (only uploader, admin, or HOD can update)
     const canUpdate = 
-      file.uploadedBy.toString() === req.user.id ||
+      file.uploadedBy?.toString() === req.user.id ||
       req.user.role === 'admin' ||
-      (req.user.role === 'hod' && file.department.toString() === req.user.department?.toString());
+      (req.user.role === 'hod' && file.department?.toString() === req.user.department?.toString());
 
     if (!canUpdate) {
       return res.status(403).json({ 
@@ -431,8 +531,12 @@ exports.updateFile = async (req, res, next) => {
     });
 
     // Handle tags specially
-    if (req.body.tags && typeof req.body.tags === 'string') {
-      updates.tags = req.body.tags.split(',').map(tag => tag.trim());
+    if (req.body.tags) {
+      if (Array.isArray(req.body.tags)) {
+        updates.tags = req.body.tags;
+      } else if (typeof req.body.tags === 'string') {
+        updates.tags = req.body.tags.split(',').map(tag => tag.trim());
+      }
     }
 
     const updatedFile = await File.findByIdAndUpdate(
@@ -469,9 +573,9 @@ exports.deleteFile = async (req, res, next) => {
 
     // Check permissions
     const canDelete = 
-      file.uploadedBy.toString() === req.user.id ||
+      file.uploadedBy?.toString() === req.user.id ||
       req.user.role === 'admin' ||
-      (req.user.role === 'hod' && file.department.toString() === req.user.department?.toString());
+      (req.user.role === 'hod' && file.department?.toString() === req.user.department?.toString());
 
     if (!canDelete) {
       return res.status(403).json({ 
@@ -520,7 +624,7 @@ exports.getFilesByCourse = async (req, res, next) => {
       enrollmentStatus: 'enrolled'
     });
 
-    const isLecturer = course.lecturers.some(l => l.toString() === req.user.id);
+    const isLecturer = course.lecturers?.some(l => l?.toString() === req.user.id);
     const isAdmin = ['admin', 'hod', 'dean'].includes(req.user.role);
 
     if (!isEnrolled && !isLecturer && !isAdmin) {
@@ -548,10 +652,11 @@ exports.getFilesByCourse = async (req, res, next) => {
 
     // Group files by type
     const groupedFiles = files.reduce((acc, file) => {
-      if (!acc[file.fileType]) {
-        acc[file.fileType] = [];
+      const type = file.fileType || 'other';
+      if (!acc[type]) {
+        acc[type] = [];
       }
-      acc[file.fileType].push(file);
+      acc[type].push(file);
       return acc;
     }, {});
 
@@ -615,14 +720,25 @@ exports.getFilesByYearAndSemester = async (req, res, next) => {
 
     // Group by course
     const groupedByCourse = files.reduce((acc, file) => {
-      const courseId = file.course._id.toString();
-      if (!acc[courseId]) {
-        acc[courseId] = {
-          course: file.course,
-          files: []
-        };
+      if (file.course) {
+        const courseId = file.course._id.toString();
+        if (!acc[courseId]) {
+          acc[courseId] = {
+            course: file.course,
+            files: []
+          };
+        }
+        acc[courseId].files.push(file);
+      } else {
+        // Files without a course
+        if (!acc.other) {
+          acc.other = {
+            course: { courseCode: 'Other', courseName: 'Uncategorized' },
+            files: []
+          };
+        }
+        acc.other.files.push(file);
       }
-      acc[courseId].files.push(file);
       return acc;
     }, {});
 
@@ -673,7 +789,7 @@ exports.getFilesByDepartment = async (req, res, next) => {
     // Get statistics
     const stats = {
       totalFiles: files.length,
-      totalSize: files.reduce((acc, f) => acc + f.size, 0),
+      totalSize: files.reduce((acc, f) => acc + (f.size || 0), 0),
       byType: {},
       topUploaders: {},
       monthlyUploads: {}
@@ -681,21 +797,26 @@ exports.getFilesByDepartment = async (req, res, next) => {
 
     files.forEach(file => {
       // By type
-      stats.byType[file.fileType] = (stats.byType[file.fileType] || 0) + 1;
+      const type = file.fileType || 'other';
+      stats.byType[type] = (stats.byType[type] || 0) + 1;
 
       // By uploader
       const uploaderName = file.uploadedBy?.name || 'Unknown';
       stats.topUploaders[uploaderName] = (stats.topUploaders[uploaderName] || 0) + 1;
 
       // Monthly stats
-      const month = file.uploadedAt.toISOString().slice(0, 7);
-      stats.monthlyUploads[month] = (stats.monthlyUploads[month] || 0) + 1;
+      if (file.uploadedAt) {
+        const month = file.uploadedAt.toISOString().slice(0, 7);
+        stats.monthlyUploads[month] = (stats.monthlyUploads[month] || 0) + 1;
+      }
     });
+
+    const department = await Department.findById(departmentId).select('name code');
 
     res.json({
       success: true,
       count: files.length,
-      department: await Department.findById(departmentId).select('name code'),
+      department,
       stats,
       files
     });
@@ -738,10 +859,11 @@ exports.getFileStats = async (req, res, next) => {
     // Calculate statistics
     files.forEach(file => {
       // Total size
-      stats.totalSize += file.size;
+      stats.totalSize += file.size || 0;
 
       // By file type
-      stats.byType[file.fileType] = (stats.byType[file.fileType] || 0) + 1;
+      const type = file.fileType || 'other';
+      stats.byType[type] = (stats.byType[type] || 0) + 1;
 
       // By course
       if (file.course) {
@@ -755,12 +877,14 @@ exports.getFileStats = async (req, res, next) => {
       }
 
       // Monthly stats
-      const month = file.uploadedAt.toISOString().slice(0, 7);
-      if (!stats.monthlyStats[month]) {
-        stats.monthlyStats[month] = { count: 0, size: 0 };
+      if (file.uploadedAt) {
+        const month = file.uploadedAt.toISOString().slice(0, 7);
+        if (!stats.monthlyStats[month]) {
+          stats.monthlyStats[month] = { count: 0, size: 0 };
+        }
+        stats.monthlyStats[month].count += 1;
+        stats.monthlyStats[month].size += file.size || 0;
       }
-      stats.monthlyStats[month].count += 1;
-      stats.monthlyStats[month].size += file.size;
     });
 
     // Top downloaded files
@@ -822,9 +946,9 @@ exports.bulkDeleteFiles = async (req, res, next) => {
 
         // Check permissions
         const canDelete = 
-          file.uploadedBy.toString() === req.user.id ||
+          file.uploadedBy?.toString() === req.user.id ||
           req.user.role === 'admin' ||
-          (req.user.role === 'hod' && file.department.toString() === req.user.department?.toString());
+          (req.user.role === 'hod' && file.department?.toString() === req.user.department?.toString());
 
         if (!canDelete) {
           results.failed.push({
@@ -858,71 +982,3 @@ exports.bulkDeleteFiles = async (req, res, next) => {
     next(error);
   }
 };
-
-// Helper function to check file access
-const checkFileAccess = async (file, user) => {
-  // Admin and HOD have full access
-  if (user.role === 'admin' || user.role === 'registrar') return true;
-  
-  if (user.role === 'hod' && file.department?.toString() === user.department?.toString()) {
-    return true;
-  }
-
-  if (user.role === 'dean' && file.faculty?.toString() === user.facultyManaged?.toString()) {
-    return true;
-  }
-
-  // Uploader always has access
-  if (file.uploadedBy.toString() === user.id) return true;
-
-  // Check if user is a lecturer for this course
-  const course = await Course.findById(file.course);
-  if (course && course.lecturers.some(l => l.toString() === user.id)) {
-    return true;
-  }
-
-  // Check if user is a student
-  if (user.role === 'student') {
-    // Check if file is public
-    if (file.isPublic) {
-      // Check if student is enrolled in the course
-      const isEnrolled = await Enrollment.exists({
-        student: user.id,
-        course: file.course,
-        enrollmentStatus: 'enrolled'
-      });
-
-      if (isEnrolled) return true;
-
-      // Check department access
-      if (file.accessControl?.allowedDepartments?.includes(user.department)) {
-        return true;
-      }
-
-      // Check year and semester
-      if (file.yearOfStudy && file.yearOfStudy === user.yearOfStudy) {
-        if (!file.semester || file.semester === user.semester) {
-          return true;
-        }
-      }
-    }
-
-    // Check custom access control
-    if (file.accessControl) {
-      const { allowedRoles, allowedDepartments, allowedYears, allowedSemesters } = file.accessControl;
-      
-      if (allowedRoles?.includes('student')) {
-        if (allowedDepartments?.includes(user.department)) {
-          if (!allowedYears.length || allowedYears.includes(user.yearOfStudy)) {
-            if (!allowedSemesters.length || allowedSemesters.includes(user.semester)) {
-              return true;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return false;
-};
-
