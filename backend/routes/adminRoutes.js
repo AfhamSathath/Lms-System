@@ -9,6 +9,8 @@ const {
     getResultStats,
     getDepartmentStats,
     getTimetableStats,
+    getRecentActivities,
+    getLastLogins
 } = adminController=require('../controllers/adminController');
 
 // All routes are protected and require admin role
@@ -23,6 +25,8 @@ router.get('/enrollments/stats', getEnrollmentStats);
 router.get('/results/stats', getResultStats);
 router.get('/departments/stats', getDepartmentStats);
 router.get('/timetables/stats', getTimetableStats);
+router.get('/users/last-logins', getLastLogins);
+router.get('/activities/recent', getRecentActivities);
 
 
 

@@ -6,6 +6,60 @@ const Result = require('../models/result');
 const Department = require('../models/Department');
 const Timetable = require('../models/timetable');
 
+const Activity = require('../models/Activity');
+
+// GET /api/admin/users/stats
+exports.getUserStats = async (req, res) => {
+  try {
+    const total = await User.countDocuments();
+    const students = await User.countDocuments({ role: 'student' });
+    const lecturers = await User.countDocuments({ role: 'lecturer' });
+    const admins = await User.countDocuments({ role: 'admin' });
+    const hods = await User.countDocuments({ role: 'hod' });
+    const deans = await User.countDocuments({ role: 'dean' });
+    const active = await User.countDocuments({ lastLogin: { $ne: null } });
+
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const newThisMonth = await User.countDocuments({ createdAt: { $gte: monthStart } });
+
+    res.json({
+      stats: { total, students, lecturers, admins, hods, deans, active, newThisMonth }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+// GET /api/admin/users/last-logins
+exports.getLastLogins = async (req, res) => {
+  try {
+    const users = await User.find({})
+      .sort({ lastLogin: -1 })
+      .limit(20)
+      .select('name email role lastLogin');
+
+    res.json({ users });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+// GET /api/admin/activities/recent
+exports.getRecentActivities = async (req, res) => {
+  try {
+    const activities = await Activity.find({})
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .populate('user', 'name role');
+
+    res.json({ activities });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
 
 // @desc    Get user statistics
 // @route   GET /api/admin/users/stats

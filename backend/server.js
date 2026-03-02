@@ -49,6 +49,7 @@ app.use('/api/timetables', require('./routes/timetableroutes'));
 app.use('/api/enrollments', require('./routes/enrollmentRoutes'));
 app.use('/api/stats', require('./routes/statsRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/activities', require('./routes/activityRoutes'));
 
 
 
