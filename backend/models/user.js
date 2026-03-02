@@ -5,7 +5,7 @@ const userSchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, 'Name is required'],
-    trim: true,
+    trim: true
   },
   email: {
     type: String,
@@ -13,65 +13,95 @@ const userSchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
     trim: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email'],
+    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
   },
   password: {
     type: String,
     required: [true, 'Password is required'],
     minlength: [6, 'Password must be at least 6 characters'],
+    select: false
   },
   role: {
     type: String,
     enum: ['student', 'lecturer', 'admin', 'hod', 'dean'],
     default: 'student',
+    required: true
   },
+  // Student specific fields
   studentId: {
     type: String,
     unique: true,
     sparse: true,
+    uppercase: true,
+    trim: true
   },
+  // Staff specific fields
   lecturerId: {
     type: String,
     unique: true,
     sparse: true,
+    uppercase: true,
+    trim: true
   },
   department: {
     type: String,
-    required: function() {
-      return this.role !== 'admin';
-    },
+    trim: true
   },
   semester: {
     type: Number,
     min: 1,
-    max: 8,
-    required: function() {
-      return this.role === 'student';
-    },
+    max: 8
+  },
+  yearOfStudy: {
+    type: Number,
+    min: 1,
+    max: 5
   },
   phone: {
     type: String,
-    match: [/^[0-9]{10}$/, 'Please enter a valid phone number'],
+    trim: true
   },
-  address: String,
-  profilePicture: String,
+  address: {
+    type: String,
+    trim: true
+  },
+  emergencyContact: {
+    type: String,
+    trim: true
+  },
+  gender: {
+    type: String,
+    enum: ['male', 'female', 'other']
+  },
+  dateOfBirth: {
+    type: Date
+  },
+  qualifications: {
+    type: String,
+    trim: true
+  },
+  specialization: {
+    type: String,
+    trim: true
+  },
   isActive: {
     type: Boolean,
-    default: true,
+    default: true
   },
   lastLogin: {
-    type: Date,
-    default: null, // ensure null if never logged in
+    type: Date
   },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
+  resetPasswordToken: String,
+  resetPasswordExpire: Date
+}, {
+  timestamps: true
 });
 
 // Hash password before saving
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password')) {
+    return next();
+  }
   
   try {
     const salt = await bcrypt.genSalt(10);
@@ -87,9 +117,9 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Remove password when converting to JSON
+// Remove sensitive info when converting to JSON
 userSchema.set('toJSON', {
-  transform: function(doc, ret) {
+  transform: function(_doc, ret) {
     delete ret.password;
     delete ret.__v;
     return ret;

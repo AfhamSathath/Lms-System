@@ -1,86 +1,77 @@
+// routes/userroutes.js
 const express = require('express');
 const router = express.Router();
+const { body } = require('express-validator');
 
-// Models (if needed)
-const { User } = require('../models/user');
-
-// Middlewares
-const auth = require('../middleware/auth');
-const validation = require('../middleware/validation');
-const upload = require('../middleware/upload');
-
-// Controllers
-const userController = require('../controllers/usercontroller');
-
-// Destructure middleware
-const { protect, authorize } = auth;
-const { validateUser } = validation;
-const { uploadProfilePicture } = upload;
-
-// Destructure controller functions
 const {
+  registerUser,
+  login,
+  getMe,
   getUsers,
-  getUser,
-  createUser,
-  updateUser,
-  deleteUser,
-  bulkImportUsers,
   updateProfile,
-  removeProfilePicture,
-  getStudentsByYearAndSemester,
-  getLecturersByDepartment,
-  getUserStats,
-  getStudentTranscript,
-  getLecturerWorkload
-} = userController;
+  updatePassword,
+  forgotPassword,
+  resetPassword,
+  getAllUsers,
+  getUsersByRole,
+  getUserById,
+  updateUser,
+  toggleUserStatus,
+  deleteUser,
+  adminResetPassword,
+  bulkImportUsers,
+  exportUsersCSV
+} = usercontroller=require('../controllers/usercontroller');
 
-// ======================== ROUTES ========================
+const { protect, authorize } = require('../middleware/auth');
 
-// All routes require authentication
-router.use(protect);
+// ------------------ AUTH ROUTES (Public & Private User) ------------------ //
 
-// ----------------- Profile -----------------
-router.put('/profile', updateProfile); // Update own profile
-router.post('/profile/picture', uploadProfilePicture, updateProfile); // Upload profile picture
-router.delete('/profile/picture', removeProfilePicture); // Delete profile picture
-
-// ----------------- Statistics -----------------
-router.get('/stats', authorize('admin', 'hod', 'dean'), getUserStats);
-
-// ----------------- Filters -----------------
-router.get(
-  '/students/year/:year/semester/:semester',
-  authorize('admin', 'hod', 'lecturer', 'dean'),
-  getStudentsByYearAndSemester
-);
-
-router.get(
-  '/lecturers/department/:department',
-  authorize('admin', 'hod', 'dean'),
-  getLecturersByDepartment
-);
-
-// ----------------- Transcript / Workload -----------------
-router.get('/student/:id/transcript', getStudentTranscript);
-router.get('/lecturer/:id/workload', getLecturerWorkload);
-
-// ----------------- Bulk import -----------------
+// Public routes
 router.post(
-  '/bulk-import',
-  authorize('admin', 'registrar'),
-  bulkImportUsers
+  '/auth/register',
+  [
+    body('name', 'Name is required').notEmpty(),
+    body('email', 'Please include a valid email').isEmail(),
+    body('password', 'Password must be at least 6 characters').isLength({ min: 6 }),
+  ],
+  registerUser
 );
 
-// ----------------- Admin only -----------------
-router.use(authorize('admin'));
+router.post(
+  '/auth/login',
+  [
+    body('email', 'Please include a valid email').isEmail(),
+    body('password', 'Password is required').exists(),
+  ],
+  login
+);
 
-router.route('/')
-  .get(getUsers)
-  .post(validateUser, createUser);
+router.get('/', getUsers); 
+router.post('/auth/forgot-password', forgotPassword);
+router.put('/auth/reset-password/:resetToken', resetPassword);
 
-router.route('/:id')
-  .get(getUser)
-  .put(validateUser, updateUser)
-  .delete(deleteUser);
+// Private routes (logged-in users)
+router.get('/auth/me', protect, getMe);
+router.put('/auth/update-profile', protect, updateProfile);
+router.put('/auth/update-password', protect, updatePassword);
+
+// ------------------ ADMIN ROUTES ------------------ //
+router.use(protect, authorize('admin')); // All routes below require admin
+
+// User management
+router.get('/auth/users', getAllUsers);
+router.get('/auth/users/role/:role', getUsersByRole);
+router.get('/auth/users/:id', getUserById);
+router.put('/auth/users/:id', updateUser);
+router.put('/auth/users/:id/toggle-status', toggleUserStatus);
+router.delete('/auth/users/:id', deleteUser);
+
+// Admin password reset
+router.post('/auth/users/:id/reset-password', adminResetPassword);
+
+// Bulk import & export
+router.post('/auth/users/bulk-import', bulkImportUsers);
+router.get('/auth/users/export/csv', exportUsersCSV);
 
 module.exports = router;

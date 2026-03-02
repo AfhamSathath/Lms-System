@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/Authcontext';
 import api from '../../services/api';
-import Loader from '../../components/common/loader';
+
 import Modal from '../../components/common/model';
 import { 
   FiFile, 
