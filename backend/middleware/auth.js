@@ -52,6 +52,8 @@ exports.protect = async (req, res, next) => {
   }
 };
 
+
+
 // Authorize by role
 exports.authorize = (...roles) => {
   return (req, res, next) => {

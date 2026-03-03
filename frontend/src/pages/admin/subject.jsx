@@ -1,3 +1,4 @@
+// AdminSubjects.jsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../services/api';
 import Loader from '../../components/common/loader';
@@ -37,23 +38,23 @@ const CURRICULUM = {
     '1st Year': {
       1: [
         { code: 'CO1121', name: 'Basic Mathematics for Computing', credits: 3, category: 'Lecture' },
-        { code: 'CO1122', name: 'Basic Computer Programming', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CO1112' },
+        { code: 'CO1122', name: 'Basic Computer Programming', credits: 3, category: 'Lecture' },
         { code: 'CO1112', name: 'Practical work on CO1122', credits: 1, category: 'Practical' },
         { code: 'CO1123', name: 'Formal Methods for Problem Solving', credits: 3, category: 'Lecture' },
-        { code: 'CO1124', name: 'Computer Systems & PC Applications', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CO1114' },
+        { code: 'CO1124', name: 'Computer Systems & PC Applications', credits: 3, category: 'Lecture' },
         { code: 'CO1114', name: 'Practical work on CO1124', credits: 1, category: 'Practical' },
-        { code: 'CO1125', name: 'Statistics for Science and Technology', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CO1115' },
+        { code: 'CO1125', name: 'Statistics for Science and Technology', credits: 3, category: 'Lecture' },
         { code: 'CO1115', name: 'Practical work on CO1125', credits: 1, category: 'Practical' },
         { code: 'CO1126', name: 'Management Information System', credits: 3, category: 'Management' },
         { code: 'GEP-I', name: 'General English Proficiency - I', credits: 2, category: 'General' },
       ],
       2: [
         { code: 'CO1221', name: 'Systems Analysis & Design', credits: 3, category: 'Lecture' },
-        { code: 'CO1222', name: 'Data Structures & Algorithms', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CO1212' },
+        { code: 'CO1222', name: 'Data Structures & Algorithms', credits: 3, category: 'Lecture' },
         { code: 'CO1212', name: 'Practical work on CO1222', credits: 1, category: 'Practical' },
-        { code: 'CO1223', name: 'Data Base Management Systems', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CO1213' },
+        { code: 'CO1223', name: 'Data Base Management Systems', credits: 3, category: 'Lecture' },
         { code: 'CO1213', name: 'Practical work on CO1223', credits: 1, category: 'Practical' },
-        { code: 'CO1224', name: 'MultiMedia & HyperMedia Development', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CO1214' },
+        { code: 'CO1224', name: 'MultiMedia & HyperMedia Development', credits: 3, category: 'Lecture' },
         { code: 'CO1214', name: 'Practical work on CO1224', credits: 1, category: 'Practical' },
         { code: 'CO1225', name: 'Computer Architecture', credits: 3, category: 'Lecture' },
         { code: 'CO1226', name: 'Social Harmony', credits: 2, category: 'General' },
@@ -62,23 +63,23 @@ const CURRICULUM = {
     '2nd Year': {
       1: [
         { code: 'CO2121', name: 'Advanced Mathematics for Computing', credits: 3, category: 'Lecture' },
-        { code: 'CO2122', name: 'Operating Systems', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CO2112' },
+        { code: 'CO2122', name: 'Operating Systems', credits: 3, category: 'Lecture' },
         { code: 'CO2112', name: 'Practical work on CO2122', credits: 1, category: 'Practical' },
         { code: 'CO2123', name: 'Software Engineering', credits: 3, category: 'Lecture' },
-        { code: 'CO2124', name: 'Internet and Web Design', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CO2114' },
+        { code: 'CO2124', name: 'Internet and Web Design', credits: 3, category: 'Lecture' },
         { code: 'CO2114', name: 'Practical work on CO2124', credits: 1, category: 'Practical' },
-        { code: 'CO2125', name: 'Object Oriented Programming', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CO2115' },
+        { code: 'CO2125', name: 'Object Oriented Programming', credits: 3, category: 'Lecture' },
         { code: 'CO2115', name: 'Practical work on CO2125', credits: 1, category: 'Practical' },
         { code: 'CO2126', name: 'Sri Lankan Studies', credits: 2, category: 'General' },
         { code: 'GEP-III', name: 'General English Proficiency - III', credits: 2, category: 'General' },
       ],
       2: [
         { code: 'CO2221', name: 'Data Communication Systems', credits: 3, category: 'Lecture' },
-        { code: 'CO2222', name: 'Visual System Development Tools', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CO2212' },
+        { code: 'CO2222', name: 'Visual System Development Tools', credits: 3, category: 'Lecture' },
         { code: 'CO2212', name: 'Practical work on CO2222', credits: 1, category: 'Practical' },
-        { code: 'CO2223', name: 'Computer Graphics', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CO2213' },
+        { code: 'CO2223', name: 'Computer Graphics', credits: 3, category: 'Lecture' },
         { code: 'CO2213', name: 'Practical work on CO2223', credits: 1, category: 'Practical' },
-        { code: 'CO2224', name: 'Human Computer Interaction', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CO2214' },
+        { code: 'CO2224', name: 'Human Computer Interaction', credits: 3, category: 'Lecture' },
         { code: 'CO2214', name: 'Practical work on CO2224', credits: 1, category: 'Practical' },
         { code: 'CO2225', name: 'Software Management Techniques', credits: 3, category: 'Management' },
         { code: 'CO2226', name: 'Automata Theory', credits: 3, category: 'Lecture' },
@@ -86,24 +87,24 @@ const CURRICULUM = {
     },
     '3rd Year': {
       1: [
-        { code: 'CS3121', name: 'Logic Programming & Expert Systems', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CS3111' },
+        { code: 'CS3121', name: 'Logic Programming & Expert Systems', credits: 3, category: 'Lecture' },
         { code: 'CS3111', name: 'Practical work on CS3121', credits: 1, category: 'Practical' },
-        { code: 'CS3122', name: 'Advanced Database Management Systems', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CS3112' },
+        { code: 'CS3122', name: 'Advanced Database Management Systems', credits: 3, category: 'Lecture' },
         { code: 'CS3112', name: 'Practical work on CS3122', credits: 1, category: 'Practical' },
-        { code: 'CS3123', name: 'Systems & Network Administration', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CS3113' },
+        { code: 'CS3123', name: 'Systems & Network Administration', credits: 3, category: 'Lecture' },
         { code: 'CS3113', name: 'Practical work on CS3123', credits: 1, category: 'Practical' },
-        { code: 'CS3124', name: 'Data Security', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CS3114' },
+        { code: 'CS3124', name: 'Data Security', credits: 3, category: 'Lecture' },
         { code: 'CS3114', name: 'Practical work on CS3124', credits: 1, category: 'Practical' },
         { code: 'CS3135', name: 'Theory of Computing', credits: 3, category: 'Lecture' },
         { code: 'EC3101', name: 'Foundations of Management', credits: 3, category: 'Management' },
       ],
       2: [
-        { code: 'CS3221', name: 'Assembly Programming', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CS3211' },
+        { code: 'CS3221', name: 'Assembly Programming', credits: 3, category: 'Lecture' },
         { code: 'CS3211', name: 'Practical work on CS3221', credits: 1, category: 'Practical' },
-        { code: 'CS3222', name: 'Software Quality Assurance', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CS3212' },
+        { code: 'CS3222', name: 'Software Quality Assurance', credits: 3, category: 'Lecture' },
         { code: 'CS3212', name: 'Practical work on CS3222', credits: 1, category: 'Practical' },
         { code: 'CS3233', name: 'Professional Issues in IT', credits: 3, category: 'Lecture' },
-        { code: 'CS3224', name: 'Computer Networks', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CS3214' },
+        { code: 'CS3224', name: 'Computer Networks', credits: 3, category: 'Lecture' },
         { code: 'CS3214', name: 'Practical work on CS3222', credits: 1, category: 'Practical' },
         { code: 'CS3235', name: 'Industrial Training/Project', credits: 6, category: 'Project' },
       ]
@@ -111,7 +112,7 @@ const CURRICULUM = {
     '4th Year': {
       1: [
         { code: 'CS4121', name: 'Advanced Computer Architecture', credits: 3, category: 'Lecture' },
-        { code: 'CS4122', name: 'Machine Learning', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CS4112' },
+        { code: 'CS4122', name: 'Machine Learning', credits: 3, category: 'Lecture' },
         { code: 'CS4112', name: 'Practical work on CS4122', credits: 1, category: 'Practical' },
         { code: 'CS4123', name: 'Distributed Systems', credits: 3, category: 'Lecture' },
         { code: 'CS4124', name: 'Research Methodology', credits: 3, category: 'Lecture' },
@@ -120,7 +121,7 @@ const CURRICULUM = {
       2: [
         { code: 'CS4221', name: 'Advanced Networking', credits: 3, category: 'Lecture' },
         { code: 'CS4222', name: 'Cloud Computing', credits: 3, category: 'Lecture' },
-        { code: 'CS4223', name: 'Ethical Hacking', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'CS4213' },
+        { code: 'CS4223', name: 'Ethical Hacking', credits: 3, category: 'Lecture' },
         { code: 'CS4213', name: 'Practical work on CS4223', credits: 1, category: 'Practical' },
         { code: 'CS42P2', name: 'Research Project - Part II', credits: 6, category: 'Project' },
       ]
@@ -129,7 +130,7 @@ const CURRICULUM = {
   'Software Engineering': {
     '1st Year': {
       1: [
-        { code: 'SE1101', name: 'Fundamentals of Programming', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'SE1101P' },
+        { code: 'SE1101', name: 'Fundamentals of Programming', credits: 3, category: 'Lecture' },
         { code: 'SE1101P', name: 'Programming Lab', credits: 1, category: 'Practical' },
         { code: 'SE1102', name: 'Mathematics for Computing', credits: 3, category: 'Lecture' },
         { code: 'SE1103', name: 'Digital Logic Design', credits: 3, category: 'Lecture' },
@@ -137,9 +138,9 @@ const CURRICULUM = {
         { code: 'SE1105', name: 'Introduction to Software Engineering', credits: 3, category: 'Lecture' },
       ],
       2: [
-        { code: 'SE1201', name: 'Object Oriented Programming', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'SE1201P' },
+        { code: 'SE1201', name: 'Object Oriented Programming', credits: 3, category: 'Lecture' },
         { code: 'SE1201P', name: 'OOP Lab', credits: 1, category: 'Practical' },
-        { code: 'SE1202', name: 'Data Structures', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'SE1202P' },
+        { code: 'SE1202', name: 'Data Structures', credits: 3, category: 'Lecture' },
         { code: 'SE1202P', name: 'Data Structures Lab', credits: 1, category: 'Practical' },
         { code: 'SE1203', name: 'Database Systems', credits: 3, category: 'Lecture' },
         { code: 'SE1204', name: 'Web Development Basics', credits: 3, category: 'Lecture' },
@@ -149,13 +150,13 @@ const CURRICULUM = {
       1: [
         { code: 'SE2101', name: 'Software Requirements Engineering', credits: 3, category: 'Lecture' },
         { code: 'SE2102', name: 'Algorithms Analysis', credits: 3, category: 'Lecture' },
-        { code: 'SE2103', name: 'UI/UX Design', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'SE2103P' },
+        { code: 'SE2103', name: 'UI/UX Design', credits: 3, category: 'Lecture' },
         { code: 'SE2103P', name: 'UI/UX Lab', credits: 1, category: 'Practical' },
         { code: 'SE2104', name: 'Professional Development', credits: 2, category: 'General' },
       ],
       2: [
         { code: 'SE2201', name: 'Software Design and Architecture', credits: 3, category: 'Lecture' },
-        { code: 'SE2202', name: 'Mobile App Development', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'SE2202P' },
+        { code: 'SE2202', name: 'Mobile App Development', credits: 3, category: 'Lecture' },
         { code: 'SE2202P', name: 'Mobile Dev Lab', credits: 1, category: 'Practical' },
         { code: 'SE2203', name: 'Quality Assurance', credits: 3, category: 'Lecture' },
         { code: 'SE2204', name: 'Operating Systems', credits: 3, category: 'Lecture' },
@@ -166,7 +167,7 @@ const CURRICULUM = {
         { code: 'SE3101', name: 'Software Project Management', credits: 3, category: 'Management' },
         { code: 'SE3102', name: 'Enterprise Architecture', credits: 3, category: 'Lecture' },
         { code: 'SE3103', name: 'Cloud Applications Development', credits: 3, category: 'Lecture' },
-        { code: 'SE3104', name: 'Software Testing', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'SE3104P' },
+        { code: 'SE3104', name: 'Software Testing', credits: 3, category: 'Lecture' },
         { code: 'SE3104P', name: 'Testing Lab', credits: 1, category: 'Practical' },
       ],
       2: [
@@ -193,13 +194,13 @@ const CURRICULUM = {
     '1st Year': {
       1: [
         { code: 'IT1101', name: 'Introduction to IT', credits: 3, category: 'Lecture' },
-        { code: 'IT1102', name: 'Programming Fundamentals', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'IT1102P' },
+        { code: 'IT1102', name: 'Programming Fundamentals', credits: 3, category: 'Lecture' },
         { code: 'IT1102P', name: 'Programming Lab', credits: 1, category: 'Practical' },
         { code: 'IT1103', name: 'Mathematics for IT', credits: 3, category: 'Lecture' },
         { code: 'IT1104', name: 'Digital Literacy', credits: 2, category: 'General' },
       ],
       2: [
-        { code: 'IT1201', name: 'Web Technologies', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'IT1201P' },
+        { code: 'IT1201', name: 'Web Technologies', credits: 3, category: 'Lecture' },
         { code: 'IT1201P', name: 'Web Lab', credits: 1, category: 'Practical' },
         { code: 'IT1202', name: 'Database Management', credits: 3, category: 'Lecture' },
         { code: 'IT1203', name: 'Computer Networks Basics', credits: 3, category: 'Lecture' },
@@ -207,7 +208,7 @@ const CURRICULUM = {
     },
     '2nd Year': {
       1: [
-        { code: 'IT2101', name: 'System Administration', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'IT2101P' },
+        { code: 'IT2101', name: 'System Administration', credits: 3, category: 'Lecture' },
         { code: 'IT2101P', name: 'SysAdmin Lab', credits: 1, category: 'Practical' },
         { code: 'IT2102', name: 'Information Security', credits: 3, category: 'Lecture' },
         { code: 'IT2103', name: 'Business Analysis', credits: 3, category: 'Management' },
@@ -221,7 +222,7 @@ const CURRICULUM = {
     '3rd Year': {
       1: [
         { code: 'IT3101', name: 'Enterprise Networks', credits: 3, category: 'Lecture' },
-        { code: 'IT3102', name: 'Cyber Security', credits: 3, category: 'Lecture', hasPractical: true, practicalCode: 'IT3102P' },
+        { code: 'IT3102', name: 'Cyber Security', credits: 3, category: 'Lecture' },
         { code: 'IT3102P', name: 'Security Lab', credits: 1, category: 'Practical' },
         { code: 'IT3103', name: 'IT Project Management', credits: 3, category: 'Management' },
       ],
@@ -598,37 +599,7 @@ const SubjectForm = ({
       </div>
     </div>
 
-    {/* Practical Work Section */}
-    <div className="border-t pt-4">
-      <div className="flex items-center mb-4">
-        <input
-          type="checkbox"
-          name="hasPractical"
-          checked={formData.hasPractical}
-          onChange={onChange}
-          className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-        />
-        <label className="ml-2 block text-sm text-gray-700">
-          This subject has practical work
-        </label>
-      </div>
 
-      {formData.hasPractical && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Practical Code</label>
-            <input
-              type="text"
-              name="practicalCode"
-              value={formData.practicalCode}
-              onChange={onChange}
-              placeholder="e.g., CO1212"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-          </div>
-        </div>
-      )}
-    </div>
 
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
@@ -698,18 +669,28 @@ const AdminSubjects = ({ sidebarOpen }) => {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [subjectsRes, lecturersRes, statsRes] = await Promise.all([
-        api.get('api/courses'), // Changed from '/subjects' to '/courses'
-        api.get('api/users?role=lecturer'),
-        api.get('api/courses/stats/all') // Changed from '/subjects/stats/by-year' to '/courses/stats/all'
-      ]);
 
-      setSubjects(subjectsRes.data.subjects || []);
-      setLecturers(lecturersRes.data.users || []);
+      // Fetch all courses
+      const subjectsRes = await api.get('api/courses');
 
-      // Handle stats data structure
-      const statsData = statsRes.data.stats || statsRes.data || {};
-      setStats(statsData);
+      // Fetch lecturers
+      const lecturersRes = await api.get('api/users', {
+        params: { role: 'lecturer' }
+      });
+
+      // Fetch stats
+      const statsRes = await api.get('api/courses/stats/all');
+
+      // Handle different response structures
+      const subjectsData = subjectsRes.data.data || subjectsRes.data.subjects || subjectsRes.data;
+      setSubjects(Array.isArray(subjectsData) ? subjectsData : []);
+
+      const lecturersData = lecturersRes.data.data || lecturersRes.data.users || lecturersRes.data;
+      setLecturers(Array.isArray(lecturersData) ? lecturersData : []);
+
+      // Handle stats data
+      const statsData = statsRes.data.data || statsRes.data.stats || statsRes.data;
+      setStats(statsData || {});
 
       // Update pagination if available
       if (subjectsRes.data.pagination) {
@@ -718,7 +699,7 @@ const AdminSubjects = ({ sidebarOpen }) => {
 
     } catch (error) {
       console.error('Fetch error:', error);
-      toast.error('Failed to fetch data');
+      toast.error(error.response?.data?.message || 'Failed to fetch data');
     } finally {
       setLoading(false);
     }
@@ -764,9 +745,9 @@ const AdminSubjects = ({ sidebarOpen }) => {
     if (filters.searchTerm) {
       const term = filters.searchTerm.toLowerCase();
       filtered = filtered.filter(s =>
-        s.name.toLowerCase().includes(term) ||
-        s.code.toLowerCase().includes(term) ||
-        s.department.toLowerCase().includes(term)
+        s.name?.toLowerCase().includes(term) ||
+        s.code?.toLowerCase().includes(term) ||
+        s.department?.toLowerCase().includes(term)
       );
     }
 
@@ -816,8 +797,6 @@ const AdminSubjects = ({ sidebarOpen }) => {
         code: selected.code,
         credits: selected.credits,
         category: selected.category,
-        hasPractical: selected.hasPractical || false,
-        practicalCode: selected.practicalCode || '',
       }));
     }
   };
@@ -831,15 +810,13 @@ const AdminSubjects = ({ sidebarOpen }) => {
       if (modalName === 'edit') {
         setSelectedSubject(data);
         setFormData({
-          name: data.name,
-          code: data.code,
-          credits: data.credits,
-          year: data.year,
-          semester: data.semester,
-          department: data.department,
+          name: data.name || '',
+          code: data.code || '',
+          credits: data.credits || '',
+          year: data.year || '',
+          semester: data.semester || '',
+          department: data.department || 'Computer Science',
           category: data.category || 'Lecture',
-          hasPractical: data.hasPractical || false,
-          practicalCode: data.practicalCode || '',
           lecturer: data.lecturer?._id || '',
           description: data.description || ''
         });
@@ -861,16 +838,17 @@ const AdminSubjects = ({ sidebarOpen }) => {
     }
   };
 
-  // API Handlers - ALL CHANGED FROM '/subjects' TO '/courses'
+  // API Handlers - FIXED: All using '/courses' endpoint
   const handleAddSubject = async (e) => {
     e.preventDefault();
     setActionLoading(prev => ({ ...prev, add: true }));
     try {
-      await api.post('/courses', formData); // Changed from '/subjects'
+      await api.post('api/courses', formData);
       toast.success('Subject added successfully');
       closeModal('add');
       fetchData();
     } catch (error) {
+      console.error('Add error:', error);
       toast.error(error.response?.data?.message || 'Add failed');
     } finally {
       setActionLoading(prev => ({ ...prev, add: false }));
@@ -881,11 +859,12 @@ const AdminSubjects = ({ sidebarOpen }) => {
     e.preventDefault();
     setActionLoading(prev => ({ ...prev, edit: true }));
     try {
-      await api.put(`/courses/${selectedSubject._id}`, formData); // Changed from '/subjects'
+      await api.put(`api/courses/${selectedSubject._id}`, formData);
       toast.success('Subject updated successfully');
       closeModal('edit');
       fetchData();
     } catch (error) {
+      console.error('Edit error:', error);
       toast.error(error.response?.data?.message || 'Update failed');
     } finally {
       setActionLoading(prev => ({ ...prev, edit: false }));
@@ -896,11 +875,12 @@ const AdminSubjects = ({ sidebarOpen }) => {
     if (!window.confirm('Are you sure you want to delete this subject?')) return;
     setActionLoading(prev => ({ ...prev, delete: true }));
     try {
-      await api.delete(`/courses/${id}`); // Changed from '/subjects'
+      await api.delete(`api/courses/${id}`);
       toast.success('Subject deleted');
       fetchData();
     } catch (error) {
-      toast.error('Delete failed');
+      console.error('Delete error:', error);
+      toast.error(error.response?.data?.message || 'Delete failed');
     } finally {
       setActionLoading(prev => ({ ...prev, delete: false }));
     }
@@ -908,11 +888,17 @@ const AdminSubjects = ({ sidebarOpen }) => {
 
   const fetchSubjectsByDepartment = async (department) => {
     try {
-      const res = await api.get(`api/courses?department=${department}`); // Changed from '/subjects'
+      const res = await api.get('api/courses', {
+        params: { department }
+      });
+
+      // Handle different response structures
+      const subjectsData = res.data.data || res.data.subjects || res.data;
+      const deptSubjects = Array.isArray(subjectsData) ? subjectsData : [];
 
       // Group the subjects by year and semester
       const grouped = {};
-      res.data.subjects.forEach(subject => {
+      deptSubjects.forEach(subject => {
         if (!grouped[subject.year]) {
           grouped[subject.year] = { semester1: [], semester2: [] };
         }
@@ -926,6 +912,7 @@ const AdminSubjects = ({ sidebarOpen }) => {
       setGroupedSubjects(grouped);
       openModal('departmentView', department);
     } catch (error) {
+      console.error('Fetch department subjects error:', error);
       toast.error('Failed to fetch department subjects');
     }
   };
@@ -933,13 +920,14 @@ const AdminSubjects = ({ sidebarOpen }) => {
   const handleSeedSubjects = async () => {
     setActionLoading(prev => ({ ...prev, seed: true }));
     try {
-      const res = await api.post('/courses/seed', { // Changed from '/subjects/seed'
+      const res = await api.post('api/courses/seed', {
         department: seedOption === 'all' ? undefined : seedOption
       });
       toast.success(res.data.message || 'Subjects seeded successfully');
       closeModal('seed');
       fetchData();
     } catch (error) {
+      console.error('Seed error:', error);
       toast.error(error.response?.data?.message || 'Seeding failed');
     } finally {
       setActionLoading(prev => ({ ...prev, seed: false }));
@@ -955,25 +943,22 @@ const AdminSubjects = ({ sidebarOpen }) => {
 
     setActionLoading(prev => ({ ...prev, bulk: true }));
     try {
-      await api.post('/courses/bulk-upload', formData, { // Changed from '/subjects/bulk-upload'
+      await api.post('api/courses/bulk-upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       toast.success('Bulk upload successful');
       closeModal('bulkUpload');
       fetchData();
     } catch (error) {
-      toast.error('Bulk upload failed');
+      console.error('Bulk upload error:', error);
+      toast.error(error.response?.data?.message || 'Bulk upload failed');
     } finally {
       setActionLoading(prev => ({ ...prev, bulk: false }));
     }
   };
 
   const handleDownloadTemplate = () => {
-    const csvContent = "name,code,credits,year,semester,department,category,hasPractical,practicalCode,description\n" +
-      "Basic Mathematics,CO1121,3,1st Year,1,Computer Science,Lecture,false,,\n" +
-      "Programming Lab,CO1112,1,1st Year,1,Computer Science,Practical,false,,\n" +
-      "Data Structures,CO1222,3,1st Year,2,Computer Science,Lecture,true,CO1212,\n" +
-      "Data Structures Lab,CO1212,1,1st Year,2,Computer Science,Practical,false,,";
+    const csvContent = "name,code,credits,year,semester,department,category";
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -999,7 +984,7 @@ const AdminSubjects = ({ sidebarOpen }) => {
 
   const handlePageChange = (newPage) => {
     setPagination(prev => ({ ...prev, page: newPage }));
-    fetchData(newPage);
+    fetchData();
   };
 
   if (loading) return <Loader fullScreen />;
@@ -1317,7 +1302,7 @@ const AdminSubjects = ({ sidebarOpen }) => {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Upload CSV with columns: name, code, credits, year, semester, department, category, hasPractical, practicalCode, description
+              Upload CSV with columns: name, code, credits, year, semester, department, category, description
             </p>
           </div>
 
@@ -1396,12 +1381,7 @@ const AdminSubjects = ({ sidebarOpen }) => {
                               <span className="text-xs text-gray-400">No lecturer</span>
                             )}
                           </div>
-                          {sub.hasPractical && (
-                            <div className="mt-1 text-xs text-green-600 flex items-center">
-                              <FiCheckCircle className="mr-1 h-3 w-3" />
-                              Practical: {sub.practicalCode}
-                            </div>
-                          )}
+
                         </div>
                       ))}
                     </div>
@@ -1432,12 +1412,7 @@ const AdminSubjects = ({ sidebarOpen }) => {
                               <span className="text-xs text-gray-400">No lecturer</span>
                             )}
                           </div>
-                          {sub.hasPractical && (
-                            <div className="mt-1 text-xs text-green-600 flex items-center">
-                              <FiCheckCircle className="mr-1 h-3 w-3" />
-                              Practical: {sub.practicalCode}
-                            </div>
-                          )}
+
                         </div>
                       ))}
                     </div>
