@@ -1,0 +1,6 @@
+name,email,password,role,studentId,employeeId,department,yearOfStudy,semester,phone,address
+John Doe,john@example.com,password1,student,STU001,,Computer Science,1,1,771234567,Colombo
+Jane Smith,jane@example.com,password12,lecturer,,LEC001,Computer Science,,,771234566,Kandy
+Admin User,admin@example.com,password123,admin,,,,,,771238567,Kandy
+HOD User,hod@example.com,password1234,hod,,HOD001,Computer Science,,,771233567,Kandy
+register,register@example.com,password12345,register,,REG001,Computer Science,,,771235567,Kandy

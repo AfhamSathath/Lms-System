@@ -44,8 +44,17 @@ router.post(
 // Forgot & Reset Password
 router.post('/', userController.createUser);
 router.get('/', userController.getAllUsers);
-router.post('/auth/forgot-password', userController.forgotPassword);
-router.put('/auth/reset-password/:resetToken', userController.resetPassword);
+router.delete('/:id', userController.deleteUser);
+router.put('/:id', userController.updateUser);
+router.put('/:id/admin-reset-password', userController.adminResetPassword);
+router.put('/:id/update-profile', protect, userController.updateProfile);
+router.put('/:id/update-password', protect, userController.updatePassword);
+router.put('/:id/toggle-status', userController.toggleUserStatus);
+router.post('/:id/reset-password', userController.resetPassword);
+
+// Bulk import & CSV export
+router.post('/bulk-import', userController.bulkImportUsers);
+router.get('/export/csv', userController.exportUsersCSV);
 
 // ---------------- PRIVATE USER ROUTES ----------------
 router.use(protect);
@@ -79,13 +88,8 @@ router.post(
   ],
   userController.createUser
 );
-router.put('/users/:id', userController.updateUser);
-router.delete('/users/:id', userController.deleteUser);
-router.put('/users/:id/toggle-status', userController.toggleUserStatus);
-router.post('/users/:id/reset-password', userController.adminResetPassword);
 
-// Bulk import & CSV export
-router.post('/users/bulk-import', userController.bulkImportUsers);
-router.get('/users/export/csv', userController.exportUsersCSV);
+
+
 
 module.exports = router;
