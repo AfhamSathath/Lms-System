@@ -17,6 +17,7 @@ const {
   getDepartmentStats,
   getYearlyStats,
   bulkUploadResults,
+  
 } = resultcontroller;
 
 // ================= MULTER SETUP =================

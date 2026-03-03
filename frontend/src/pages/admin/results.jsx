@@ -6,7 +6,8 @@ import {
   FiAward, FiPlus, FiEdit2, FiTrash2, FiSearch, FiUser, FiDownload, FiFilter,
   FiBarChart2, FiPrinter, FiDownload as FiDownloadIcon, FiTrendingUp,
   FiPieChart, FiStar, FiClock, FiCheckCircle, FiXCircle, FiUsers,
-  FiBookmark, FiGrid, FiLayers, FiCalendar, FiClock as FiTimeIcon
+  FiBookmark, FiGrid, FiLayers, FiCalendar, FiClock as FiTimeIcon,
+  FiLock, FiUnlock, FiAlertCircle
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
@@ -48,6 +49,10 @@ const AdminResults = ({ sidebarOpen }) => {
   const [yearlyStats, setYearlyStats] = useState(null);
   const [formData, setFormData] = useState({
     student: '', subject: '', year: '', semester: '', examType: 'final', marks: ''
+  });
+  const [lockedFields, setLockedFields] = useState({
+    year: false,
+    semester: false
   });
 
   // Academic years - 4 years with 2 semesters each
@@ -153,22 +158,41 @@ const AdminResults = ({ sidebarOpen }) => {
     setFilteredResults(filtered);
   };
 
-  const resetForm = () => setFormData({ 
-    student: '', subject: '', year: '', semester: '', examType: 'final', marks: '' 
-  });
+  const resetForm = () => {
+    setFormData({ 
+      student: '', subject: '', year: '', semester: '', examType: 'final', marks: '' 
+    });
+    setLockedFields({
+      year: false,
+      semester: false
+    });
+  };
 
-  // Handle subject selection and auto-fill year and semester
+  // Handle subject selection and auto-fill year and semester with locking
   const handleSubjectChange = (e) => {
     const subjectId = e.target.value;
     const selectedSubject = subjects.find(s => s._id === subjectId);
     
-    setFormData(prev => ({
-      ...prev,
-      subject: subjectId,
-      // Auto-fill year and semester from the selected subject
-      year: selectedSubject?.year || prev.year,
-      semester: selectedSubject?.semester || prev.semester
-    }));
+    if (selectedSubject) {
+      setFormData(prev => ({
+        ...prev,
+        subject: subjectId,
+        // Auto-fill year and semester from the selected subject
+        year: selectedSubject.year || prev.year,
+        semester: selectedSubject.semester || prev.semester
+      }));
+      
+      // Lock the year and semester fields when subject is selected
+      setLockedFields({
+        year: true,
+        semester: true
+      });
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        subject: subjectId
+      }));
+    }
   };
 
   const openEditModal = (result) => {
@@ -180,6 +204,11 @@ const AdminResults = ({ sidebarOpen }) => {
       semester: result.semester || '',
       examType: result.examType || 'final',
       marks: result.marks || ''
+    });
+    // Lock fields in edit mode as well
+    setLockedFields({
+      year: true,
+      semester: true
     });
     setShowEditModal(true);
   };
@@ -564,6 +593,11 @@ const AdminResults = ({ sidebarOpen }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    // Prevent changes to locked fields
+    if (lockedFields[name]) {
+      toast.error(`${name} is locked and cannot be modified`);
+      return;
+    }
     setFormData({ ...formData, [name]: value });
   };
 
@@ -606,34 +640,21 @@ const AdminResults = ({ sidebarOpen }) => {
     }
   };
 
-  const handleBulkUpload = async (selectedFile, token) => {
-  if (!selectedFile) {
-    alert("Please select a file first");
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append("file", selectedFile); // MUST match upload.single('file')
-
-  try {
-    const res = await axios.post(
-      "http://localhost:5001/api/results/bulk-upload", // correct route
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`, // must send token
-        },
-      }
-    );
-
-    console.log("Upload success:", res.data);
-    alert("Upload successful!");
-  } catch (error) {
-    console.error("Upload error:", error.response?.data);
-    alert("Upload failed: " + error.response?.data?.message);
-  }
-};
+  const handleBulkUpload = async (e) => {
+    e.preventDefault();
+    if (!bulkFile) return toast.error('Please select a CSV file');
+    const data = new FormData();
+    data.append('file', bulkFile);
+    try {
+      await api.post('api/results/bulk-upload', data, { headers: { 'Content-Type': 'multipart/form-data' } });
+      toast.success('Bulk upload successful');
+      setShowBulkUploadModal(false);
+      setBulkFile(null);
+      fetchData();
+    } catch (error) {
+      toast.error('Bulk upload failed');
+    }
+  };
 
   const handleDownloadTemplate = () => {
     const csvContent = "StudentID,SubjectCode,Year,Semester,ExamType,Marks\n";
@@ -1259,7 +1280,7 @@ const AdminResults = ({ sidebarOpen }) => {
               <select 
                 name="subject" 
                 value={formData.subject} 
-                onChange={handleSubjectChange}  // Changed to handleSubjectChange
+                onChange={handleSubjectChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
@@ -1270,33 +1291,53 @@ const AdminResults = ({ sidebarOpen }) => {
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-gray-500 mt-1">Year and semester will auto-fill from selected subject</p>
+              <p className="text-xs text-gray-500 mt-1">Year and semester will auto-fill and lock from selected subject</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Academic Year</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Academic Year {lockedFields.year && <FiLock className="inline ml-1 text-gray-500" size={14} />}
+              </label>
               <select 
                 name="year" 
                 value={formData.year} 
                 onChange={handleInputChange} 
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={lockedFields.year}
+                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                  lockedFields.year ? 'bg-gray-100 cursor-not-allowed' : ''
+                }`}
               >
                 <option value="">Select Year</option>
                 {academicYears.map(year => <option key={year} value={year}>{year}</option>)}
               </select>
+              {lockedFields.year && (
+                <p className="text-xs text-gray-500 mt-1 flex items-center">
+                  <FiLock size={12} className="mr-1" /> Locked based on subject selection
+                </p>
+              )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Semester</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Semester {lockedFields.semester && <FiLock className="inline ml-1 text-gray-500" size={14} />}
+              </label>
               <select 
                 name="semester" 
                 value={formData.semester} 
                 onChange={handleInputChange} 
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={lockedFields.semester}
+                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                  lockedFields.semester ? 'bg-gray-100 cursor-not-allowed' : ''
+                }`}
               >
                 <option value="">Select Semester</option>
                 {semesters.map(s => <option key={s} value={s}>Semester {s}</option>)}
               </select>
+              {lockedFields.semester && (
+                <p className="text-xs text-gray-500 mt-1 flex items-center">
+                  <FiLock size={12} className="mr-1" /> Locked based on subject selection
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Exam Type</label>
@@ -1369,7 +1410,7 @@ const AdminResults = ({ sidebarOpen }) => {
               <select 
                 name="subject" 
                 value={formData.subject} 
-                onChange={handleSubjectChange}  // Changed to handleSubjectChange
+                onChange={handleSubjectChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
@@ -1380,29 +1421,35 @@ const AdminResults = ({ sidebarOpen }) => {
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-gray-500 mt-1">Year and semester will auto-fill from selected subject</p>
+              <p className="text-xs text-gray-500 mt-1">Year and semester are locked based on subject</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Academic Year</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Academic Year <FiLock className="inline ml-1 text-gray-500" size={14} />
+              </label>
               <select 
                 name="year" 
                 value={formData.year} 
                 onChange={handleInputChange} 
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={true}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed focus:outline-none"
               >
                 <option value="">Select Year</option>
                 {academicYears.map(year => <option key={year} value={year}>{year}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Semester</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Semester <FiLock className="inline ml-1 text-gray-500" size={14} />
+              </label>
               <select 
                 name="semester" 
                 value={formData.semester} 
                 onChange={handleInputChange} 
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={true}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed focus:outline-none"
               >
                 <option value="">Select Semester</option>
                 {semesters.map(s => <option key={s} value={s}>Semester {s}</option>)}
@@ -1466,6 +1513,9 @@ const AdminResults = ({ sidebarOpen }) => {
             />
             <p className="text-xs text-gray-500 mt-1">Upload CSV with columns: StudentID, SubjectCode, Year, Semester, ExamType, Marks</p>
             <p className="text-xs text-gray-500">Year options: 1st Year, 2nd Year, 3rd Year, 4th Year | Semester: 1 or 2</p>
+            <p className="text-xs text-gray-500 mt-2 flex items-center">
+              <FiAlertCircle className="inline mr-1" /> Note: Year and semester will be validated against subject data
+            </p>
           </div>
           <div className="flex justify-between pt-4">
             <button 

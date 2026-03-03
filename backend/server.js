@@ -225,7 +225,7 @@ app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/activities', activityRoutes);
-app.use('/api/bulk-upload',resultRoutes); // For bulk upload route
+
 
 // ================= HEALTH CHECK =================
 app.get('/health', (req, res) => {
