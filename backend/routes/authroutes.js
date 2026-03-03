@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
 const authController = require('../controllers/authController');
-const{ registerUser, loginUser } = require('../controllers/authController');
 const { protect, authorize } = require('../middleware/auth');
 
 // Validation rules for registration

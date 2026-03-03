@@ -19,6 +19,7 @@
     "express-validator": "^7.0.1",
     "fs": "^0.0.1-security",
     "helmet": "^7.2.0",
+    "hpp": "^0.2.3",
     "json2csv": "^6.0.0-alpha.2",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^7.8.9",

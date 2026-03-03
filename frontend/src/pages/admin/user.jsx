@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/Authcontext';
 import api from '../../services/api';
-import Loader from '../../components/common/Loader';
+import Loader from '../../components/common/loader';
 import Modal from '../../components/common/model';
 import {
   FiUserPlus,
@@ -68,7 +68,6 @@ const AdminUsers = ({ sidebarOpen }) => {
     semester: '',
     phone: '',
     address: '',
-    bio: '',
     qualifications: '',
     specialization: '',
     gender: '',
@@ -229,7 +228,6 @@ const AdminUsers = ({ sidebarOpen }) => {
       semester: '',
       phone: '',
       address: '',
-      bio: '',
       qualifications: '',
       specialization: '',
       gender: '',
@@ -269,7 +267,7 @@ const AdminUsers = ({ sidebarOpen }) => {
     }
 
     try {
-      await api.post('/users', formData);
+      await api.post('api/users', formData);
       toast.success('User added successfully');
       setShowAddModal(false);
       resetForm();
@@ -294,7 +292,7 @@ const AdminUsers = ({ sidebarOpen }) => {
       semester: u.semester || '',
       phone: u.phone || '',
       address: u.address || '',
-      bio: u.bio || '',
+    
       qualifications: u.qualifications || '',
       specialization: u.specialization || '',
       gender: u.gender || '',
@@ -320,7 +318,7 @@ const AdminUsers = ({ sidebarOpen }) => {
     }
 
     try {
-      await api.put(`/users/${selectedUser._id}`, updateData);
+      await api.put(`api/users/${selectedUser._id}`, updateData);
       toast.success('User updated successfully');
       setShowEditModal(false);
       setSelectedUser(null);
@@ -336,7 +334,7 @@ const AdminUsers = ({ sidebarOpen }) => {
     if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
 
     try {
-      await api.delete(`/users/${id}`);
+      await api.delete(`api/users/${id}`);
       toast.success('User deleted successfully');
       fetchUsers();
     } catch (err) {
@@ -347,7 +345,7 @@ const AdminUsers = ({ sidebarOpen }) => {
 
   const handleToggleStatus = async (id, currentStatus) => {
     try {
-      await api.put(`/users/${id}/toggle-status`);
+      await api.put(`api/users/${id}/toggle-status`);
       toast.success(`User ${currentStatus ? 'deactivated' : 'activated'} successfully`);
       fetchUsers();
     } catch (error) {
@@ -360,7 +358,7 @@ const AdminUsers = ({ sidebarOpen }) => {
     if (!window.confirm('Send password reset email to this user?')) return;
 
     try {
-      await api.post(`/users/${id}/reset-password`);
+      await api.post(`api/users/${id}/reset-password`);
       toast.success('Password reset email sent');
     } catch (error) {
       console.error('Reset password error:', error);
@@ -1345,20 +1343,7 @@ const UserForm = ({
         </div>
       </div>
 
-      {/* Bio */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Bio
-        </label>
-        <textarea
-          name="bio"
-          value={formData.bio}
-          onChange={handleInputChange}
-          rows="3"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-          placeholder="Enter user bio..."
-        />
-      </div>
+     
 
       {/* Status */}
       {isEdit && (
@@ -1547,13 +1532,7 @@ const UserProfile = ({ user, roles, onEdit, onToggleStatus, onClose, getRoleBadg
           </div>
         </div>
 
-        {/* Bio */}
-        {user.bio && (
-          <div className="md:col-span-2 bg-gray-50 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-500 mb-3">Bio</h3>
-            <p className="text-sm text-gray-900">{user.bio}</p>
-          </div>
-        )}
+        
 
         {/* Account Info */}
         <div className="md:col-span-2 bg-gray-50 rounded-lg p-4">

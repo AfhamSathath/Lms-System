@@ -2,76 +2,90 @@
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
-
-const {
-  registerUser,
-  login,
-  getMe,
-  getUsers,
-  updateProfile,
-  updatePassword,
-  forgotPassword,
-  resetPassword,
-  getAllUsers,
-  getUsersByRole,
-  getUserById,
-  updateUser,
-  toggleUserStatus,
-  deleteUser,
-  adminResetPassword,
-  bulkImportUsers,
-  exportUsersCSV
-} = usercontroller=require('../controllers/usercontroller');
-
+const userController = require('../controllers/usercontroller');
 const { protect, authorize } = require('../middleware/auth');
 
-// ------------------ AUTH ROUTES (Public & Private User) ------------------ //
+// ---------------- AUTH ROUTES ----------------
 
-// Public routes
+// Register (public)
 router.post(
   '/auth/register',
   [
-    body('name', 'Name is required').notEmpty(),
-    body('email', 'Please include a valid email').isEmail(),
-    body('password', 'Password must be at least 6 characters').isLength({ min: 6 }),
+    body('name').notEmpty().withMessage('Name is required'),
+    body('email').isEmail().withMessage('Please enter a valid email'),
+    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+    body('role').isIn(['student','lecturer','admin','hod','dean']).withMessage('Invalid role'),
+    body('studentId').if(body('role').equals('student')).notEmpty().withMessage('Student ID is required for students'),
+    body('lecturerId').if(body('role').equals('lecturer')).notEmpty().withMessage('Lecturer ID is required for lecturers'),
+    body('department').if(body('role').not().equals('admin')).notEmpty().withMessage('Department is required'),
+    body('semester').if(body('role').equals('student')).isInt({ min: 1, max: 8 }).withMessage('Semester must be between 1-8'),
+    body('yearOfStudy').if(body('role').equals('student')).isInt({ min: 1, max: 5 }).withMessage('Year of study must be between 1-5'),
+    body('qualifications').if(body('role').equals('lecturer')).notEmpty().withMessage('Qualifications are required for lecturers'),
+    body('specialization').if(body('role').equals('lecturer')).notEmpty().withMessage('Specialization is required for lecturers'),
+    body('gender').isIn(['male', 'female', 'other']).withMessage('Gender must be male, female, or other'),
+    body('phone').optional().isMobilePhone().withMessage('Invalid phone number'),
+    body('address').optional().isString().withMessage('Address must be a string'),
+    body('emergencyContact').optional().isString().withMessage('Emergency contact must be a string'),
+    body('emergencyContactPhone').optional().isMobilePhone().withMessage('Invalid emergency contact phone')
   ],
-  registerUser
+  userController.registerUser
 );
 
+// Login
 router.post(
   '/auth/login',
   [
-    body('email', 'Please include a valid email').isEmail(),
-    body('password', 'Password is required').exists(),
+    body('email').isEmail().withMessage('Please enter a valid email'),
+    body('password').exists().withMessage('Password is required')
   ],
-  login
+  userController.login
 );
 
-router.get('/', getUsers); 
-router.post('/auth/forgot-password', forgotPassword);
-router.put('/auth/reset-password/:resetToken', resetPassword);
+// Forgot & Reset Password
+router.post('/', userController.createUser);
+router.get('/', userController.getAllUsers);
+router.post('/auth/forgot-password', userController.forgotPassword);
+router.put('/auth/reset-password/:resetToken', userController.resetPassword);
 
-// Private routes (logged-in users)
-router.get('/auth/me', protect, getMe);
-router.put('/auth/update-profile', protect, updateProfile);
-router.put('/auth/update-password', protect, updatePassword);
+// ---------------- PRIVATE USER ROUTES ----------------
+router.use(protect);
 
-// ------------------ ADMIN ROUTES ------------------ //
-router.use(protect, authorize('admin')); // All routes below require admin
+// Current user info
+router.get('/auth/me', userController.getMe);
+router.put('/auth/update-profile', userController.updateProfile);
+router.put('/auth/update-password', userController.updatePassword);
 
-// User management
-router.get('/auth/users', getAllUsers);
-router.get('/auth/users/role/:role', getUsersByRole);
-router.get('/auth/users/:id', getUserById);
-router.put('/auth/users/:id', updateUser);
-router.put('/auth/users/:id/toggle-status', toggleUserStatus);
-router.delete('/auth/users/:id', deleteUser);
+// ---------------- ADMIN ROUTES ----------------
+router.use(authorize('admin'));
 
-// Admin password reset
-router.post('/auth/users/:id/reset-password', adminResetPassword);
+// Users CRUD
+router.get('/users', userController.getAllUsers);
+router.get('/users/:id', userController.getUserById);
+router.post(
+  '/users',
+  [
+    body('name').notEmpty(),
+    body('email').isEmail(),
+    body('password').isLength({ min: 6 }),
+    body('role').isIn(['student','lecturer','admin','hod','dean']),
+    body('studentId').if(body('role').equals('student')).notEmpty(),
+    body('lecturerId').if(body('role').equals('lecturer')).notEmpty(),
+    body('department').if(body('role').not().equals('admin')).notEmpty(),
+    body('semester').if(body('role').equals('student')).isInt({ min: 1, max: 8 }),
+    body('yearOfStudy').if(body('role').equals('student')).isInt({ min: 1, max: 5 }),
+    body('qualifications').if(body('role').equals('lecturer')).notEmpty(),
+    body('specialization').if(body('role').equals('lecturer')).notEmpty(),
+    body('gender').isIn(['male', 'female', 'other'])
+  ],
+  userController.createUser
+);
+router.put('/users/:id', userController.updateUser);
+router.delete('/users/:id', userController.deleteUser);
+router.put('/users/:id/toggle-status', userController.toggleUserStatus);
+router.post('/users/:id/reset-password', userController.adminResetPassword);
 
-// Bulk import & export
-router.post('/auth/users/bulk-import', bulkImportUsers);
-router.get('/auth/users/export/csv', exportUsersCSV);
+// Bulk import & CSV export
+router.post('/users/bulk-import', userController.bulkImportUsers);
+router.get('/users/export/csv', userController.exportUsersCSV);
 
 module.exports = router;

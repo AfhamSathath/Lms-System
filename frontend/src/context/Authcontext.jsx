@@ -73,27 +73,22 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (userData) => {
-    try {
-      const response = await api.post('/api/auth/register', userData);
-      
-      let { token, user } = response.data;
-      // Ensure user has an id property for backward compatibility
-      if (user._id && !user.id) {
-        user.id = user._id;
-      }
-      
-      localStorage.setItem('token', token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setToken(token);
-      setUser(user);
-      
-      toast.success('Registration successful!');
-      return { success: true, role: user.role };
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Registration failed');
-      return { success: false };
-    }
-  };
+  try {
+    const res = await api.post('/auth/register', userData);
+
+    localStorage.setItem('token', res.data.token);
+
+    return {
+      success: true,
+      role: res.data.user.role
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.response?.data?.message
+    };
+  }
+};
 
   const logout = () => {
     localStorage.removeItem('token');
