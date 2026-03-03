@@ -101,10 +101,10 @@ const AdminUsers = ({ sidebarOpen }) => {
       setLoading(true);
       const response = await api.get('api/users');
       console.log('Fetch Users Response:', response.data);
-      
+
       // Handle different response structures more robustly
       let usersData = [];
-      
+
       if (response.data) {
         if (Array.isArray(response.data)) {
           usersData = response.data;
@@ -124,22 +124,22 @@ const AdminUsers = ({ sidebarOpen }) => {
           }
         }
       }
-      
+
       console.log('Processed Users Data:', usersData);
-      
+
       if (!usersData.length) {
         console.warn('No users found in response:', response.data);
       }
-      
+
       setUsers(usersData);
       setFilteredUsers(usersData);
-      
+
       // Calculate stats from users data
       if (usersData.length > 0) {
         const total = usersData.length;
         const active = usersData.filter(u => u && u.isActive).length;
         const inactive = total - active;
-        
+
         // Calculate new users this month
         const now = new Date();
         const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
@@ -148,7 +148,7 @@ const AdminUsers = ({ sidebarOpen }) => {
           const createdDate = new Date(u.createdAt);
           return !isNaN(createdDate) && createdDate >= thirtyDaysAgo;
         }).length;
-        
+
         // Calculate by year
         const byYear = {};
         usersData
@@ -157,7 +157,7 @@ const AdminUsers = ({ sidebarOpen }) => {
             const year = `year${u.yearOfStudy}`;
             byYear[year] = (byYear[year] || 0) + 1;
           });
-        
+
         setStats({
           total,
           active,
@@ -165,7 +165,7 @@ const AdminUsers = ({ sidebarOpen }) => {
           newThisMonth,
           byYear
         });
-        
+
         // Extract unique departments
         const uniqueDepts = [...new Set(usersData.map(u => u && u.department).filter(Boolean))];
         setDepartments(uniqueDepts);
@@ -180,7 +180,7 @@ const AdminUsers = ({ sidebarOpen }) => {
         });
         setDepartments([]);
       }
-      
+
     } catch (err) {
       console.error('Error fetching users:', err);
       toast.error(err.response?.data?.message || 'Failed to fetch users');
@@ -239,14 +239,14 @@ const AdminUsers = ({ sidebarOpen }) => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
+
     // Auto-capitalize IDs
     if (name === 'studentId' || name === 'employeeId') {
       setFormData(prev => ({ ...prev, [name]: value.toUpperCase() }));
     } else {
-      setFormData(prev => ({ 
-        ...prev, 
-        [name]: type === 'checkbox' ? checked : value 
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
       }));
     }
   };
@@ -275,7 +275,7 @@ const AdminUsers = ({ sidebarOpen }) => {
 
   const handleAddUser = async (e) => {
     e.preventDefault();
-    
+
     // Validate required fields based on role
     if (!formData.name || !formData.email || !formData.password) {
       toast.error('Please fill in all required fields');
@@ -345,7 +345,7 @@ const AdminUsers = ({ sidebarOpen }) => {
 
   const handleEditUser = async (e) => {
     e.preventDefault();
-    
+
     // Prepare update data (exclude password if empty)
     const updateData = { ...formData };
     if (!updateData.password) {
@@ -425,19 +425,19 @@ const AdminUsers = ({ sidebarOpen }) => {
 
       // Check if the bulk upload was successful
       if (response.data) {
-        const importedCount = response.data.count || 
-                             response.data.imported || 
-                             response.data.total || 
-                             response.data.users?.length || 
-                             'unknown';
-        
+        const importedCount = response.data.count ||
+          response.data.imported ||
+          response.data.total ||
+          response.data.users?.length ||
+          'unknown';
+
         toast.success(`Successfully imported ${importedCount} users`);
-        
+
         // Clear the modal and file
         setShowBulkUploadModal(false);
         setBulkFile(null);
         setUploadProgress(0);
-        
+
         // Add a small delay to ensure the backend has processed all users
         setTimeout(() => {
           fetchUsers(); // Refresh the user list
@@ -451,7 +451,7 @@ const AdminUsers = ({ sidebarOpen }) => {
           fetchUsers();
         }, 500);
       }
-      
+
     } catch (error) {
       console.error('Bulk upload error:', error);
       toast.error(error.response?.data?.message || 'Bulk upload failed');
@@ -466,7 +466,7 @@ const AdminUsers = ({ sidebarOpen }) => {
       "Jane Smith,jane@example.com,password123,lecturer,,LEC001,Computer Science,,,,Kandy\n" +
       "Admin User,admin@example.com,password123,admin,,,,,,,,\n" +
       "HOD User,hod@example.com,password123,hod,,HOD001,Computer Science,,,,,";
-    
+
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -497,7 +497,7 @@ const AdminUsers = ({ sidebarOpen }) => {
   };
 
   const getStatusBadge = (isActive) => {
-    return isActive 
+    return isActive
       ? 'bg-green-100 text-green-800 flex items-center'
       : 'bg-red-100 text-red-800 flex items-center';
   };
@@ -543,7 +543,7 @@ const AdminUsers = ({ sidebarOpen }) => {
               className="bg-white bg-opacity-20 text-white px-4 py-2 rounded-lg hover:bg-opacity-30 transition-colors flex items-center"
               title="Refresh"
             >
-              <FiRefreshCw className={`mr-2 ${loading ? 'animate-spin' : ''}`} /> 
+              <FiRefreshCw className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </button>
             <button
@@ -712,61 +712,61 @@ const AdminUsers = ({ sidebarOpen }) => {
         </div>
 
         {/* Active Filters */}
-        {(selectedRole !== 'all' || selectedYear !== 'all' || selectedSemester !== 'all' || 
+        {(selectedRole !== 'all' || selectedYear !== 'all' || selectedSemester !== 'all' ||
           selectedDepartment !== 'all' || selectedStatus !== 'all' || searchTerm) && (
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="text-sm text-gray-500">Active filters:</span>
-            {selectedRole !== 'all' && (
-              <FilterBadge 
-                label={`Role: ${roles.find(r => r.value === selectedRole)?.label || selectedRole}`}
-                onRemove={() => setSelectedRole('all')}
-              />
-            )}
-            {selectedDepartment !== 'all' && (
-              <FilterBadge 
-                label={`Dept: ${selectedDepartment}`}
-                onRemove={() => setSelectedDepartment('all')}
-              />
-            )}
-            {selectedYear !== 'all' && (
-              <FilterBadge 
-                label={`Year: ${selectedYear}`}
-                onRemove={() => setSelectedYear('all')}
-              />
-            )}
-            {selectedSemester !== 'all' && (
-              <FilterBadge 
-                label={`Sem: ${selectedSemester}`}
-                onRemove={() => setSelectedSemester('all')}
-              />
-            )}
-            {selectedStatus !== 'all' && (
-              <FilterBadge 
-                label={`Status: ${selectedStatus}`}
-                onRemove={() => setSelectedStatus('all')}
-              />
-            )}
-            {searchTerm && (
-              <FilterBadge 
-                label={`Search: "${searchTerm}"`}
-                onRemove={() => setSearchTerm('')}
-              />
-            )}
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedRole('all');
-                setSelectedYear('all');
-                setSelectedSemester('all');
-                setSelectedDepartment('all');
-                setSelectedStatus('all');
-              }}
-              className="text-xs text-purple-600 hover:text-purple-800 font-medium ml-2"
-            >
-              Clear all
-            </button>
-          </div>
-        )}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="text-sm text-gray-500">Active filters:</span>
+              {selectedRole !== 'all' && (
+                <FilterBadge
+                  label={`Role: ${roles.find(r => r.value === selectedRole)?.label || selectedRole}`}
+                  onRemove={() => setSelectedRole('all')}
+                />
+              )}
+              {selectedDepartment !== 'all' && (
+                <FilterBadge
+                  label={`Dept: ${selectedDepartment}`}
+                  onRemove={() => setSelectedDepartment('all')}
+                />
+              )}
+              {selectedYear !== 'all' && (
+                <FilterBadge
+                  label={`Year: ${selectedYear}`}
+                  onRemove={() => setSelectedYear('all')}
+                />
+              )}
+              {selectedSemester !== 'all' && (
+                <FilterBadge
+                  label={`Sem: ${selectedSemester}`}
+                  onRemove={() => setSelectedSemester('all')}
+                />
+              )}
+              {selectedStatus !== 'all' && (
+                <FilterBadge
+                  label={`Status: ${selectedStatus}`}
+                  onRemove={() => setSelectedStatus('all')}
+                />
+              )}
+              {searchTerm && (
+                <FilterBadge
+                  label={`Search: "${searchTerm}"`}
+                  onRemove={() => setSearchTerm('')}
+                />
+              )}
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedRole('all');
+                  setSelectedYear('all');
+                  setSelectedSemester('all');
+                  setSelectedDepartment('all');
+                  setSelectedStatus('all');
+                }}
+                className="text-xs text-purple-600 hover:text-purple-800 font-medium ml-2"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
       </div>
 
       {/* Users Table */}
@@ -807,8 +807,8 @@ const AdminUsers = ({ sidebarOpen }) => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredUsers.map((u) => (
                 u && (
-                  <tr 
-                    key={u._id || Math.random()} 
+                  <tr
+                    key={u._id || Math.random()}
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
                     onClick={() => openViewModal(u)}
                   >
@@ -830,7 +830,7 @@ const AdminUsers = ({ sidebarOpen }) => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <span className="font-mono">
-                        {u.studentId || u.employeeId || '-'}
+                        {u.role === 'student' ? (u.studentId || '-') : (u.employeeId || '-')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -882,11 +882,10 @@ const AdminUsers = ({ sidebarOpen }) => {
                         </button>
                         <button
                           onClick={() => handleToggleStatus(u._id, u.isActive)}
-                          className={`p-1 rounded ${
-                            u.isActive 
-                              ? 'text-orange-600 hover:text-orange-900 hover:bg-orange-50' 
-                              : 'text-green-600 hover:text-green-900 hover:bg-green-50'
-                          }`}
+                          className={`p-1 rounded ${u.isActive
+                            ? 'text-orange-600 hover:text-orange-900 hover:bg-orange-50'
+                            : 'text-green-600 hover:text-green-900 hover:bg-green-50'
+                            }`}
                           title={u.isActive ? 'Deactivate User' : 'Activate User'}
                         >
                           {u.isActive ? <FiLock className="h-5 w-5" /> : <FiUnlock className="h-5 w-5" />}
@@ -1105,19 +1104,19 @@ const FilterBadge = ({ label, onRemove }) => (
   </span>
 );
 
-const UserForm = ({ 
-  formData, 
+const UserForm = ({
+  formData,
   setFormData,
-  handleSubmit, 
-  handleInputChange, 
-  onCancel, 
-  roles, 
-  academicYears, 
-  semesters, 
-  departments, 
+  handleSubmit,
+  handleInputChange,
+  onCancel,
+  roles,
+  academicYears,
+  semesters,
+  departments,
   genders,
   submitText,
-  isEdit = false 
+  isEdit = false
 }) => {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -1485,7 +1484,7 @@ const UserProfile = ({ user, roles, onEdit, onToggleStatus, onClose, getRoleBadg
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">Student/Employee ID:</span>
               <span className="text-sm font-medium text-gray-900">
-                {user.studentId || user.employeeId || 'N/A'}
+                {user.studentId || user.employeeId}
               </span>
             </div>
             {user.department && (
@@ -1621,11 +1620,10 @@ const UserProfile = ({ user, roles, onEdit, onToggleStatus, onClose, getRoleBadg
       <div className="flex justify-end space-x-3 pt-6 border-t">
         <button
           onClick={onToggleStatus}
-          className={`px-6 py-2 rounded-lg transition-colors ${
-            user.isActive
-              ? 'bg-orange-600 text-white hover:bg-orange-700'
-              : 'bg-green-600 text-white hover:bg-green-700'
-          }`}
+          className={`px-6 py-2 rounded-lg transition-colors ${user.isActive
+            ? 'bg-orange-600 text-white hover:bg-orange-700'
+            : 'bg-green-600 text-white hover:bg-green-700'
+            }`}
         >
           {user.isActive ? 'Deactivate Account' : 'Activate Account'}
         </button>

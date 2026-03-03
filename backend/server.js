@@ -9,6 +9,16 @@ const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const hpp = require('hpp');
+const mongoose = require('mongoose');
+const courseRoutes = require('./routes/courseroutes');
+const resultRoutes = require('./routes/resultroutes');  
+const fileroutes = require('./routes/fileroutes');
+const notificationRoutes = require('./routes/notificationroutes');
+const timetableRoutes = require('./routes/timetableroutes');
+const enrollmentRoutes = require('./routes/enrollmentRoutes');
+const statsRoutes = require('./routes/statsRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const activityRoutes = require('./routes/activityRoutes');
 
 // Load environment variables
 dotenv.config();
@@ -206,15 +216,15 @@ app.use('/api/auth', require('./routes/authroutes'));
 app.use('/api/users', require('./routes/userroutes'));
 
 // Other routes
-app.use('/api/courses', require('./routes/courseroutes'));
-app.use('/api/results', require('./routes/resultroutes'));
-app.use('/api/files', require('./routes/fileroutes'));
-app.use('/api/notifications', require('./routes/notificationroutes'));
-app.use('/api/timetables', require('./routes/timetableroutes'));
-app.use('/api/enrollments', require('./routes/enrollmentRoutes'));
-app.use('/api/stats', require('./routes/statsRoutes'));
-app.use('/api/admin', require('./routes/adminRoutes'));
-app.use('/api/activities', require('./routes/activityRoutes'));
+app.use('/api/subjects',courseRoutes);
+app.use('/api/results', resultRoutes);
+app.use('/api/files', fileroutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/timetables', timetableRoutes);
+app.use('/api/enrollments', enrollmentRoutes);
+app.use('/api/stats', statsRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/activities', activityRoutes);
 
 // ================= HEALTH CHECK =================
 app.get('/health', (req, res) => {
