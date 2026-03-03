@@ -98,9 +98,16 @@ const AdminResults = ({ sidebarOpen }) => {
       }));
       
       setResults(processedResults);
-      setFilteredResults(processedResults);
+      
+      // Process subjects to ensure they have year and semester information
+      const processedSubjects = (subjectsRes.data.subjects || []).map(subject => ({
+        ...subject,
+        year: subject.year || '1st Year', // Default if not provided
+        semester: subject.semester || 1    // Default if not provided
+      }));
+      
+      setSubjects(processedSubjects);
       setStudents(studentsRes.data.users || []);
-      setSubjects(subjectsRes.data.subjects || []);
 
       // Extract unique departments from students
       const uniqueDepts = [...new Set((studentsRes.data.users || []).map(s => s.department || 'Unknown').filter(Boolean))];
@@ -149,6 +156,20 @@ const AdminResults = ({ sidebarOpen }) => {
   const resetForm = () => setFormData({ 
     student: '', subject: '', year: '', semester: '', examType: 'final', marks: '' 
   });
+
+  // Handle subject selection and auto-fill year and semester
+  const handleSubjectChange = (e) => {
+    const subjectId = e.target.value;
+    const selectedSubject = subjects.find(s => s._id === subjectId);
+    
+    setFormData(prev => ({
+      ...prev,
+      subject: subjectId,
+      // Auto-fill year and semester from the selected subject
+      year: selectedSubject?.year || prev.year,
+      semester: selectedSubject?.semester || prev.semester
+    }));
+  };
 
   const openEditModal = (result) => {
     setSelectedResult(result);
@@ -1225,13 +1246,18 @@ const AdminResults = ({ sidebarOpen }) => {
               <select 
                 name="subject" 
                 value={formData.subject} 
-                onChange={handleInputChange} 
+                onChange={handleSubjectChange}  // Changed to handleSubjectChange
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 <option value="">Choose a subject</option>
-                {subjects.map(s => <option key={s._id} value={s._id}>{s.name} ({s.code})</option>)}
+                {subjects.map(s => (
+                  <option key={s._id} value={s._id}>
+                    {s.name} ({s.code}) - {s.year || 'No Year'} Sem {s.semester || 'N/A'}
+                  </option>
+                ))}
               </select>
+              <p className="text-xs text-gray-500 mt-1">Year and semester will auto-fill from selected subject</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Academic Year</label>
@@ -1330,13 +1356,18 @@ const AdminResults = ({ sidebarOpen }) => {
               <select 
                 name="subject" 
                 value={formData.subject} 
-                onChange={handleInputChange} 
+                onChange={handleSubjectChange}  // Changed to handleSubjectChange
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 <option value="">Choose a subject</option>
-                {subjects.map(s => <option key={s._id} value={s._id}>{s.name} ({s.code})</option>)}
+                {subjects.map(s => (
+                  <option key={s._id} value={s._id}>
+                    {s.name} ({s.code}) - {s.year || 'No Year'} Sem {s.semester || 'N/A'}
+                  </option>
+                ))}
               </select>
+              <p className="text-xs text-gray-500 mt-1">Year and semester will auto-fill from selected subject</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Academic Year</label>
