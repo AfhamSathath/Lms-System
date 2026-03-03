@@ -114,7 +114,7 @@ exports.updatePassword = async (req, res, next) => {
 };
 
 // ---------------- ADMIN ROUTES ----------------
-exports.getAllUsers = async (req, res, next) => {
+exports.getUsers = async (req, res, next) => {
   try {
     const users = await User.find().select('-password');
     res.json({ success: true, count: users.length, users });
@@ -172,6 +172,17 @@ exports.adminResetPassword = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+// controllers/usercontroller.js
+exports.getUserByRole = async (req, res, next) => {
+  try {
+    const { role } = req.query; // e.g., /?role=student
+    const users = role ? await User.find({ role }) : await User.find();
+    res.json({ success: true, count: users.length, users });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.bulkImportUsers = async (req, res, next) => {
   res.json({ success: true, message: 'Bulk import to be implemented' });
 };
@@ -185,4 +196,15 @@ exports.exportUsersCSV = async (req, res, next) => {
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', 'attachment; filename=users.csv');
   res.send(csv);
+};
+
+
+
+// THIS MUST EXIST if you use it in routes
+exports.getStatsByYear = async (req, res, next) => {
+  try {
+    res.json({ success: true, message: "Stats by year" });
+  } catch (err) {
+    next(err);
+  }
 };

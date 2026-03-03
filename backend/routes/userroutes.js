@@ -43,7 +43,7 @@ router.post(
 
 // Forgot & Reset Password
 router.post('/', userController.createUser);
-router.get('/', userController.getAllUsers);
+router.get('/users', userController.getUsers);
 router.delete('/:id', userController.deleteUser);
 router.put('/:id', userController.updateUser);
 router.put('/:id/admin-reset-password', userController.adminResetPassword);
@@ -51,6 +51,7 @@ router.put('/:id/update-profile', protect, userController.updateProfile);
 router.put('/:id/update-password', protect, userController.updatePassword);
 router.put('/:id/toggle-status', userController.toggleUserStatus);
 router.post('/:id/reset-password', userController.resetPassword);
+router.get('/', userController.getUserByRole);
 
 // Bulk import & CSV export
 router.post('/bulk-import', userController.bulkImportUsers);
@@ -68,8 +69,8 @@ router.put('/auth/update-password', userController.updatePassword);
 router.use(authorize('admin'));
 
 // Users CRUD
-router.get('/users', userController.getAllUsers);
-router.get('/users/:id', userController.getUserById);
+router.get('/stats/by-year', userController.getStatsByYear);
+router.get('/:id', userController.getUserById);
 router.post(
   '/users',
   [

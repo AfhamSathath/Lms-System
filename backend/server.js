@@ -52,9 +52,9 @@ const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = [
       process.env.FRONTEND_URL || 'http://localhost:5173',
-      
+
     ];
-    
+
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
@@ -206,7 +206,7 @@ app.use('/api/auth', require('./routes/authroutes'));
 app.use('/api/users', require('./routes/userroutes'));
 
 // Other routes
-app.use('/api/subjects', require('./routes/courseroutes'));
+app.use('/api/courses', require('./routes/courseroutes'));
 app.use('/api/results', require('./routes/resultroutes'));
 app.use('/api/files', require('./routes/fileroutes'));
 app.use('/api/notifications', require('./routes/notificationroutes'));
@@ -341,7 +341,7 @@ process.on('unhandledRejection', (err) => {
   console.log('\n❌ UNHANDLED REJECTION! Shutting down...');
   console.log('Error:', err.name, err.message);
   console.log(err.stack);
-  
+
   server.close(() => {
     console.log('💤 Server closed due to unhandled rejection');
     process.exit(1);
@@ -353,7 +353,7 @@ process.on('uncaughtException', (err) => {
   console.log('\n❌ UNCAUGHT EXCEPTION! Shutting down...');
   console.log('Error:', err.name, err.message);
   console.log(err.stack);
-  
+
   server.close(() => {
     console.log('💤 Server closed due to uncaught exception');
     process.exit(1);

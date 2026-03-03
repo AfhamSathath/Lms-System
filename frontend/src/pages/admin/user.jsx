@@ -99,53 +99,87 @@ const AdminUsers = ({ sidebarOpen }) => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      // Fixed: Remove /api prefix since it's in the baseURL
       const response = await api.get('api/users');
-      console.log('API Response:', response.data); // Debug log
+      console.log('Fetch Users Response:', response.data);
       
-      // Handle different response structures
+      // Handle different response structures more robustly
       let usersData = [];
-      if (response.data && Array.isArray(response.data)) {
-        usersData = response.data;
-      } else if (response.data && response.data.users && Array.isArray(response.data.users)) {
-        usersData = response.data.users;
-      } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
-        usersData = response.data.data;
+      
+      if (response.data) {
+        if (Array.isArray(response.data)) {
+          usersData = response.data;
+        } else if (response.data.users && Array.isArray(response.data.users)) {
+          usersData = response.data.users;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          usersData = response.data.data;
+        } else if (response.data.results && Array.isArray(response.data.results)) {
+          usersData = response.data.results;
+        } else if (response.data.items && Array.isArray(response.data.items)) {
+          usersData = response.data.items;
+        } else if (typeof response.data === 'object') {
+          // If it's an object but not an array, try to find any array property
+          const possibleArrays = Object.values(response.data).filter(val => Array.isArray(val));
+          if (possibleArrays.length > 0) {
+            usersData = possibleArrays[0];
+          }
+        }
+      }
+      
+      console.log('Processed Users Data:', usersData);
+      
+      if (!usersData.length) {
+        console.warn('No users found in response:', response.data);
       }
       
       setUsers(usersData);
       setFilteredUsers(usersData);
       
       // Calculate stats from users data
-      const total = usersData.length;
-      const active = usersData.filter(u => u.isActive).length;
-      const inactive = total - active;
-      
-      // Calculate new users this month
-      const now = new Date();
-      const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
-      const newThisMonth = usersData.filter(u => new Date(u.createdAt) >= thirtyDaysAgo).length;
-      
-      // Calculate by year
-      const byYear = {};
-      usersData
-        .filter(u => u.role === 'student' && u.yearOfStudy)
-        .forEach(u => {
-          const year = `year${u.yearOfStudy}`;
-          byYear[year] = (byYear[year] || 0) + 1;
+      if (usersData.length > 0) {
+        const total = usersData.length;
+        const active = usersData.filter(u => u && u.isActive).length;
+        const inactive = total - active;
+        
+        // Calculate new users this month
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
+        const newThisMonth = usersData.filter(u => {
+          if (!u || !u.createdAt) return false;
+          const createdDate = new Date(u.createdAt);
+          return !isNaN(createdDate) && createdDate >= thirtyDaysAgo;
+        }).length;
+        
+        // Calculate by year
+        const byYear = {};
+        usersData
+          .filter(u => u && u.role === 'student' && u.yearOfStudy)
+          .forEach(u => {
+            const year = `year${u.yearOfStudy}`;
+            byYear[year] = (byYear[year] || 0) + 1;
+          });
+        
+        setStats({
+          total,
+          active,
+          inactive,
+          newThisMonth,
+          byYear
         });
-      
-      setStats({
-        total,
-        active,
-        inactive,
-        newThisMonth,
-        byYear
-      });
-      
-      // Extract unique departments
-      const uniqueDepts = [...new Set(usersData.map(u => u.department).filter(Boolean))];
-      setDepartments(uniqueDepts);
+        
+        // Extract unique departments
+        const uniqueDepts = [...new Set(usersData.map(u => u && u.department).filter(Boolean))];
+        setDepartments(uniqueDepts);
+      } else {
+        // Reset stats if no users
+        setStats({
+          total: 0,
+          active: 0,
+          inactive: 0,
+          newThisMonth: 0,
+          byYear: {}
+        });
+        setDepartments([]);
+      }
       
     } catch (err) {
       console.error('Error fetching users:', err);
@@ -160,43 +194,45 @@ const AdminUsers = ({ sidebarOpen }) => {
 
     // Role filter
     if (selectedRole !== 'all') {
-      filtered = filtered.filter(u => u.role === selectedRole);
+      filtered = filtered.filter(u => u && u.role === selectedRole);
     }
 
     // Year filter
     if (selectedYear !== 'all') {
-      filtered = filtered.filter(u => u.yearOfStudy === parseInt(selectedYear));
+      filtered = filtered.filter(u => u && u.yearOfStudy === parseInt(selectedYear));
     }
 
     // Semester filter
     if (selectedSemester !== 'all') {
-      filtered = filtered.filter(u => u.semester === parseInt(selectedSemester));
+      filtered = filtered.filter(u => u && u.semester === parseInt(selectedSemester));
     }
 
     // Department filter
     if (selectedDepartment !== 'all') {
-      filtered = filtered.filter(u => u.department === selectedDepartment);
+      filtered = filtered.filter(u => u && u.department === selectedDepartment);
     }
 
     // Status filter
     if (selectedStatus !== 'all') {
-      filtered = filtered.filter(u => u.isActive === (selectedStatus === 'active'));
+      filtered = filtered.filter(u => u && u.isActive === (selectedStatus === 'active'));
     }
 
     // Search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(u =>
-        u.name?.toLowerCase().includes(term) ||
-        u.email?.toLowerCase().includes(term) ||
-        u.studentId?.toLowerCase().includes(term) ||
-        u.employeeId?.toLowerCase().includes(term) ||
-        u.department?.toLowerCase().includes(term)
+        u && (
+          u.name?.toLowerCase().includes(term) ||
+          u.email?.toLowerCase().includes(term) ||
+          u.studentId?.toLowerCase().includes(term) ||
+          u.employeeId?.toLowerCase().includes(term) ||
+          u.department?.toLowerCase().includes(term)
+        )
       );
     }
 
     // Sort by name
-    filtered.sort((a, b) => a.name?.localeCompare(b.name));
+    filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     setFilteredUsers(filtered);
   };
@@ -292,7 +328,6 @@ const AdminUsers = ({ sidebarOpen }) => {
       semester: u.semester || '',
       phone: u.phone || '',
       address: u.address || '',
-    
       qualifications: u.qualifications || '',
       specialization: u.specialization || '',
       gender: u.gender || '',
@@ -378,7 +413,7 @@ const AdminUsers = ({ sidebarOpen }) => {
 
     setUploading(true);
     try {
-      await api.post('api/users/bulk-import', formData, {
+      const response = await api.post('api/users/bulk-import', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -386,11 +421,37 @@ const AdminUsers = ({ sidebarOpen }) => {
         }
       });
 
-      toast.success('Successfully imported users');
-      setShowBulkUploadModal(false);
-      setBulkFile(null);
-      setUploadProgress(0);
-      fetchUsers();
+      console.log('Bulk upload response:', response.data);
+
+      // Check if the bulk upload was successful
+      if (response.data) {
+        const importedCount = response.data.count || 
+                             response.data.imported || 
+                             response.data.total || 
+                             response.data.users?.length || 
+                             'unknown';
+        
+        toast.success(`Successfully imported ${importedCount} users`);
+        
+        // Clear the modal and file
+        setShowBulkUploadModal(false);
+        setBulkFile(null);
+        setUploadProgress(0);
+        
+        // Add a small delay to ensure the backend has processed all users
+        setTimeout(() => {
+          fetchUsers(); // Refresh the user list
+        }, 500);
+      } else {
+        toast.success('Bulk upload completed');
+        setShowBulkUploadModal(false);
+        setBulkFile(null);
+        setUploadProgress(0);
+        setTimeout(() => {
+          fetchUsers();
+        }, 500);
+      }
+      
     } catch (error) {
       console.error('Bulk upload error:', error);
       toast.error(error.response?.data?.message || 'Bulk upload failed');
@@ -475,11 +536,15 @@ const AdminUsers = ({ sidebarOpen }) => {
           </div>
           <div className="flex flex-wrap gap-3">
             <button
-              onClick={fetchUsers}
+              onClick={() => {
+                fetchUsers();
+                toast.success('Refreshing user list...');
+              }}
               className="bg-white bg-opacity-20 text-white px-4 py-2 rounded-lg hover:bg-opacity-30 transition-colors flex items-center"
               title="Refresh"
             >
-              <FiRefreshCw className="mr-2" /> Refresh
+              <FiRefreshCw className={`mr-2 ${loading ? 'animate-spin' : ''}`} /> 
+              Refresh
             </button>
             <button
               onClick={() => setShowBulkUploadModal(true)}
@@ -741,109 +806,111 @@ const AdminUsers = ({ sidebarOpen }) => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredUsers.map((u) => (
-                <tr 
-                  key={u._id} 
-                  className="hover:bg-gray-50 transition-colors cursor-pointer"
-                  onClick={() => openViewModal(u)}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                        {getInitials(u.name)}
+                u && (
+                  <tr 
+                    key={u._id || Math.random()} 
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => openViewModal(u)}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                          {getInitials(u.name)}
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">{u.name || 'N/A'}</div>
+                          <div className="text-sm text-gray-500">{u.email || 'N/A'}</div>
+                        </div>
                       </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{u.name}</div>
-                        <div className="text-sm text-gray-500">{u.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadge(u.role)}`}>
-                      {getRoleIcon(u.role)} {u.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <span className="font-mono">
-                      {u.studentId || u.employeeId || '-'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {u.department || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {u.role === 'student' ? (
-                      <div className="flex flex-wrap gap-1">
-                        {u.yearOfStudy && (
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getYearBadge(u.yearOfStudy)}`}>
-                            Year {u.yearOfStudy}
-                          </span>
-                        )}
-                        {u.semester && (
-                          <span className="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded-full">
-                            Sem {u.semester}
-                          </span>
-                        )}
-                      </div>
-                    ) : u.role === 'lecturer' && u.qualifications ? (
-                      <span className="text-xs text-gray-600">{u.qualifications}</span>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {u.phone || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(u.isActive)}`}>
-                      {u.isActive ? (
-                        <><FiCheckCircle className="mr-1 h-3 w-3" /> Active</>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadge(u.role)}`}>
+                        {getRoleIcon(u.role)} {u.role || 'N/A'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <span className="font-mono">
+                        {u.studentId || u.employeeId || '-'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {u.department || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {u.role === 'student' ? (
+                        <div className="flex flex-wrap gap-1">
+                          {u.yearOfStudy && (
+                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getYearBadge(u.yearOfStudy)}`}>
+                              Year {u.yearOfStudy}
+                            </span>
+                          )}
+                          {u.semester && (
+                            <span className="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded-full">
+                              Sem {u.semester}
+                            </span>
+                          )}
+                        </div>
+                      ) : u.role === 'lecturer' && u.qualifications ? (
+                        <span className="text-xs text-gray-600">{u.qualifications}</span>
                       ) : (
-                        <><FiXCircle className="mr-1 h-3 w-3" /> Inactive</>
+                        <span className="text-gray-400">-</span>
                       )}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {u.lastLogin ? formatDate(u.lastLogin) : 'Never'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => openEditModal(u)}
-                        className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
-                        title="Edit User"
-                      >
-                        <FiEdit2 className="h-5 w-5" />
-                      </button>
-                      <button
-                        onClick={() => handleToggleStatus(u._id, u.isActive)}
-                        className={`p-1 rounded ${
-                          u.isActive 
-                            ? 'text-orange-600 hover:text-orange-900 hover:bg-orange-50' 
-                            : 'text-green-600 hover:text-green-900 hover:bg-green-50'
-                        }`}
-                        title={u.isActive ? 'Deactivate User' : 'Activate User'}
-                      >
-                        {u.isActive ? <FiLock className="h-5 w-5" /> : <FiUnlock className="h-5 w-5" />}
-                      </button>
-                      <button
-                        onClick={() => handleResetPassword(u._id)}
-                        className="text-purple-600 hover:text-purple-900 p-1 rounded hover:bg-purple-50"
-                        title="Reset Password"
-                      >
-                        <FiEyeOff className="h-5 w-5" />
-                      </button>
-                      {u._id !== user?.id && (
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {u.phone || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(u.isActive)}`}>
+                        {u.isActive ? (
+                          <><FiCheckCircle className="mr-1 h-3 w-3" /> Active</>
+                        ) : (
+                          <><FiXCircle className="mr-1 h-3 w-3" /> Inactive</>
+                        )}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {u.lastLogin ? formatDate(u.lastLogin) : 'Never'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => handleDeleteUser(u._id)}
-                          className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
-                          title="Delete User"
+                          onClick={() => openEditModal(u)}
+                          className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
+                          title="Edit User"
                         >
-                          <FiTrash2 className="h-5 w-5" />
+                          <FiEdit2 className="h-5 w-5" />
                         </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                        <button
+                          onClick={() => handleToggleStatus(u._id, u.isActive)}
+                          className={`p-1 rounded ${
+                            u.isActive 
+                              ? 'text-orange-600 hover:text-orange-900 hover:bg-orange-50' 
+                              : 'text-green-600 hover:text-green-900 hover:bg-green-50'
+                          }`}
+                          title={u.isActive ? 'Deactivate User' : 'Activate User'}
+                        >
+                          {u.isActive ? <FiLock className="h-5 w-5" /> : <FiUnlock className="h-5 w-5" />}
+                        </button>
+                        <button
+                          onClick={() => handleResetPassword(u._id)}
+                          className="text-purple-600 hover:text-purple-900 p-1 rounded hover:bg-purple-50"
+                          title="Reset Password"
+                        >
+                          <FiEyeOff className="h-5 w-5" />
+                        </button>
+                        {u._id !== user?.id && (
+                          <button
+                            onClick={() => handleDeleteUser(u._id)}
+                            className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
+                            title="Delete User"
+                          >
+                            <FiTrash2 className="h-5 w-5" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
               ))}
             </tbody>
           </table>
@@ -853,7 +920,7 @@ const AdminUsers = ({ sidebarOpen }) => {
               <FiUsers className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No users found</h3>
               <p className="mt-1 text-sm text-gray-500">
-                Get started by adding a new user.
+                Get started by adding a new user or try adjusting your filters.
               </p>
               <div className="mt-6">
                 <button
@@ -946,7 +1013,7 @@ const AdminUsers = ({ sidebarOpen }) => {
       {/* Bulk Upload Modal */}
       <Modal
         isOpen={showBulkUploadModal}
-        onClose={() => { setShowBulkUploadModal(false); setBulkFile(null); }}
+        onClose={() => { setShowBulkUploadModal(false); setBulkFile(null); setUploadProgress(0); }}
         title="Bulk Import Users"
         size="md"
       >
@@ -993,14 +1060,14 @@ const AdminUsers = ({ sidebarOpen }) => {
             <div className="flex space-x-3">
               <button
                 type="button"
-                onClick={() => { setShowBulkUploadModal(false); setBulkFile(null); }}
+                onClick={() => { setShowBulkUploadModal(false); setBulkFile(null); setUploadProgress(0); }}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={uploading}
+                disabled={uploading || !bulkFile}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
               >
                 {uploading ? 'Uploading...' : 'Upload'}
@@ -1343,8 +1410,6 @@ const UserForm = ({
         </div>
       </div>
 
-     
-
       {/* Status */}
       {isEdit && (
         <div>
@@ -1531,8 +1596,6 @@ const UserProfile = ({ user, roles, onEdit, onToggleStatus, onClose, getRoleBadg
             )}
           </div>
         </div>
-
-        
 
         {/* Account Info */}
         <div className="md:col-span-2 bg-gray-50 rounded-lg p-4">
