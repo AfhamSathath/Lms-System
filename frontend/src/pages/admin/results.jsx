@@ -606,21 +606,34 @@ const AdminResults = ({ sidebarOpen }) => {
     }
   };
 
-  const handleBulkUpload = async (e) => {
-    e.preventDefault();
-    if (!bulkFile) return toast.error('Please select a CSV file');
-    const data = new FormData();
-    data.append('file', bulkFile);
-    try {
-      await api.post('api/results/bulk-upload', data, { headers: { 'Content-Type': 'multipart/form-data' } });
-      toast.success('Bulk upload successful');
-      setShowBulkUploadModal(false);
-      setBulkFile(null);
-      fetchData();
-    } catch (error) {
-      toast.error('Bulk upload failed');
-    }
-  };
+  const handleBulkUpload = async (selectedFile, token) => {
+  if (!selectedFile) {
+    alert("Please select a file first");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", selectedFile); // MUST match upload.single('file')
+
+  try {
+    const res = await axios.post(
+      "http://localhost:5001/api/results/bulk-upload", // correct route
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`, // must send token
+        },
+      }
+    );
+
+    console.log("Upload success:", res.data);
+    alert("Upload successful!");
+  } catch (error) {
+    console.error("Upload error:", error.response?.data);
+    alert("Upload failed: " + error.response?.data?.message);
+  }
+};
 
   const handleDownloadTemplate = () => {
     const csvContent = "StudentID,SubjectCode,Year,Semester,ExamType,Marks\n";
