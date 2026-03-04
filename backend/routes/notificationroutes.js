@@ -1,29 +1,19 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/auth');
-const notificationController = require('../controllers/notificationcontroller');
-const {
-  getNotifications,
-  markAsRead,
-  markAllAsRead,
-  getUnreadCount,
-  deleteNotification,
-  clearAll,
-  sendNotification,
-} = notificationController;
+const { protect, authorize } = require('../middleware/auth');
+const controller = require('../controllers/notificationController');
 
-// All routes require authentication
+
+
 router.use(protect);
 
-router.get('/', getNotifications);
-router.get('/unread-count', getUnreadCount);
-router.put('/read-all', markAllAsRead);
-router.put('/:id/read', markAsRead);
-router.delete('/clear-all', clearAll);
-router.delete('/:id', deleteNotification);
+router.get('/', controller.getNotifications);
+router.get('/unread-count', controller.getUnreadCount);
+router.put('/read-all', controller.markAllAsRead);
+router.put('/:id/read', controller.markAsRead);
+router.delete('/clear-all', controller.clearAll);
+router.delete('/:id', controller.deleteNotification);
 
-// Admin endpoint for sending notifications to specific users
-const { authorize } = require('../middleware/auth');
-router.post('/send', authorize('admin'), sendNotification);
+router.post('/send', authorize('admin'), controller.sendNotification);
 
 module.exports = router;

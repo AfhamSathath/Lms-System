@@ -1,165 +1,100 @@
 const Notification = require('../models/notification');
+const NotificationService = require('../services/notificationService');
 
-// @desc    Get user notifications
-// @route   GET /api/notifications
-// @access  Private
-exports.getNotifications = async (req, res, next) => {
-  try {
-    const notifications = await Notification.find({ user: req.user.id })
-      .sort('-createdAt')
-      .limit(50);
+// GET all notifications
+exports.getNotifications = async (req, res) => {
+  const notifications = await Notification.find({ user: req.user.id })
+    .sort('-createdAt')
+    .limit(50);
 
-    res.json({
-      success: true,
-      count: notifications.length,
-      notifications,
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.json({
+    success: true,
+    notifications,
+  });
 };
 
-// @desc    Mark notification as read
-// @route   PUT /api/notifications/:id/read
-// @access  Private
-exports.markAsRead = async (req, res, next) => {
-  try {
-    const notification = await Notification.findOneAndUpdate(
-      { _id: req.params.id, user: req.user.id },
-      { isRead: true },
-      { new: true }
-    );
+// GET unread count
+exports.getUnreadCount = async (req, res) => {
+  const count = await Notification.countDocuments({
+    user: req.user.id,
+    isRead: false,
+  });
 
-    if (!notification) {
-      return res.status(404).json({ message: 'Notification not found' });
-    }
-
-    res.json({
-      success: true,
-      notification,
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.json({ success: true, count });
 };
 
-// @desc    Mark all notifications as read
-// @route   PUT /api/notifications/read-all
-// @access  Private
-exports.markAllAsRead = async (req, res, next) => {
-  try {
-    await Notification.updateMany(
-      { user: req.user.id, isRead: false },
-      { isRead: true }
-    );
+// MARK single as read
+exports.markAsRead = async (req, res) => {
+  const notification = await Notification.findOneAndUpdate(
+    { _id: req.params.id, user: req.user.id },
+    { isRead: true, readAt: new Date() },
+    { new: true }
+  );
 
-    res.json({
-      success: true,
-      message: 'All notifications marked as read',
-    });
-  } catch (error) {
-    next(error);
+  if (!notification) {
+    return res.status(404).json({ message: 'Notification not found' });
   }
+
+  res.json({ success: true });
 };
 
-// @desc    Get unread count
-// @route   GET /api/notifications/unread-count
-// @access  Private
-exports.getUnreadCount = async (req, res, next) => {
-  try {
-    const count = await Notification.countDocuments({
-      user: req.user.id,
-      isRead: false,
-    });
+// MARK all as read
+exports.markAllAsRead = async (req, res) => {
+  await Notification.updateMany(
+    { user: req.user.id, isRead: false },
+    { isRead: true, readAt: new Date() }
+  );
 
-    res.json({
-      success: true,
-      count,
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.json({ success: true });
 };
 
-// @desc    Delete notification
-// @route   DELETE /api/notifications/:id
-// @access  Private
-exports.deleteNotification = async (req, res, next) => {
-  try {
-    const notification = await Notification.findOneAndDelete({
-      _id: req.params.id,
-      user: req.user.id,
-    });
+// DELETE one
+exports.deleteNotification = async (req, res) => {
+  const notification = await Notification.findOneAndDelete({
+    _id: req.params.id,
+    user: req.user.id,
+  });
 
-    if (!notification) {
-      return res.status(404).json({ message: 'Notification not found' });
-    }
-
-    res.json({
-      success: true,
-      message: 'Notification deleted',
-    });
-  } catch (error) {
-    next(error);
+  if (!notification) {
+    return res.status(404).json({ message: 'Notification not found' });
   }
+
+  res.json({ success: true });
 };
 
-// @desc    Clear all notifications
-// @route   DELETE /api/notifications/clear-all
-// @access  Private
-exports.clearAll = async (req, res, next) => {
-  try {
-    await Notification.deleteMany({ user: req.user.id });
-
-    res.json({
-      success: true,
-      message: 'All notifications cleared',
-    });
-  } catch (error) {
-    next(error);
-  }
+// CLEAR all
+exports.clearAll = async (req, res) => {
+  await Notification.deleteMany({ user: req.user.id });
+  res.json({ success: true });
 };
 
-// @desc    Create notification (internal use)
-// @access  Internal
-exports.createNotification = async (userId, title, message, type = 'general', priority = 'medium', metadata = {}) => {
-  try {
-    await Notification.create({
-      user: userId,
+// ADMIN send notification
+exports.sendNotification = async (req, res) => {
+  const { recipientIds, role, title, message, type, priority, link } = req.body;
+
+  if (!title || !message) {
+    return res.status(400).json({ message: 'Title and message required' });
+  }
+
+  if (recipientIds?.length > 0) {
+    await NotificationService.notifyMany(recipientIds, {
       title,
       message,
       type,
       priority,
-      metadata,
+      link,
     });
-  } catch (error) {
-    console.error('Error creating notification:', error);
-  }
-};
-
-// @desc    Send custom notification to list of users
-// @route   POST /api/notifications/send
-// @access  Private/Admin
-exports.sendNotification = async (req, res, next) => {
-  try {
-    const { recipientIds, title, message, type = 'general', priority = 'medium', metadata = {} } = req.body;
-    if (!recipientIds || recipientIds.length === 0) {
-      return res.status(400).json({ message: 'At least one recipient required' });
-    }
-
-    const notifications = recipientIds.map(id => ({
-      user: id,
+  } else if (role) {
+    await NotificationService.broadcastToRole(role, {
       title,
       message,
       type,
       priority,
-      metadata,
-    }));
-
-    await Notification.insertMany(notifications);
-
-    res.json({ success: true, message: 'Notifications sent' });
-  } catch (error) {
-    next(error);
+      link,
+    });
+  } else {
+    return res.status(400).json({ message: 'Provide recipients or role' });
   }
+
+  res.json({ success: true });
 };

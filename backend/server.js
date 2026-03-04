@@ -11,7 +11,7 @@ const xss = require('xss-clean');
 const hpp = require('hpp');
 const mongoose = require('mongoose');
 const courseRoutes = require('./routes/courseroutes');
-const resultRoutes = require('./routes/resultroutes');  
+const resultRoutes = require('./routes/resultroutes');
 const fileroutes = require('./routes/fileroutes');
 const notificationRoutes = require('./routes/notificationroutes');
 const timetableRoutes = require('./routes/timetableroutes');
@@ -21,6 +21,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const activityRoutes = require('./routes/activityRoutes');
 const userroutes = require('./routes/userroutes');
 const authRoutes = require('./routes/authroutes');
+
 
 // Load environment variables
 dotenv.config();
@@ -218,7 +219,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userroutes);
 
 // Other routes
-app.use('/api/subjects',courseRoutes);
+app.use('/api/subjects', courseRoutes);
 app.use('/api/results', resultRoutes);
 app.use('/api/files', fileroutes);
 app.use('/api/notifications', notificationRoutes);

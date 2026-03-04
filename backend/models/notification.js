@@ -1,45 +1,66 @@
 const mongoose = require('mongoose');
 
-const notificationSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: [true, 'User is required'],
-  },
-  title: {
-    type: String,
-    required: [true, 'Title is required'],
-    trim: true,
-  },
-  message: {
-    type: String,
-    required: [true, 'Message is required'],
-  },
-  type: {
-    type: String,
-    enum: ['result', 'file', 'timetable', 'alert', 'general'],
-    default: 'general',
-  },
-  priority: {
-    type: String,
-    enum: ['low', 'medium', 'high'],
-    default: 'medium',
-  },
-  isRead: {
-    type: Boolean,
-    default: false,
-  },
-  metadata: {
-    type: mongoose.Schema.Types.Mixed,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-    expires: 30 * 24 * 60 * 60, // Auto delete after 30 days
-  },
-});
+const notificationSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
 
-// Index for efficient queries
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 150,
+    },
+
+    message: {
+      type: String,
+      required: true,
+      maxlength: 500,
+    },
+
+    type: {
+      type: String,
+      enum: [
+        'RESULT_PUBLISHED',
+        'FILE_UPLOADED',
+        'TIMETABLE_UPDATED',
+        'SYSTEM_ALERT',
+        'GENERAL',
+      ],
+      default: 'GENERAL',
+    },
+
+    priority: {
+      type: String,
+      enum: ['LOW', 'MEDIUM', 'HIGH'],
+      default: 'MEDIUM',
+    },
+
+    link: {
+      type: String, // where frontend redirects
+    },
+
+    isRead: {
+      type: Boolean,
+      default: false,
+    },
+
+    readAt: Date,
+
+    metadata: mongoose.Schema.Types.Mixed,
+
+    expiresAt: {
+      type: Date,
+      index: { expireAfterSeconds: 0 }, // TTL
+    },
+  },
+  { timestamps: true }
+);
+
 notificationSchema.index({ user: 1, isRead: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Notification', notificationSchema);
