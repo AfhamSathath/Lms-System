@@ -26,6 +26,7 @@ const AdminResults = ({ sidebarOpen }) => {
   const [students, setStudents] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [subjects, setSubjects] = useState([]);
+  const [filteredSubjects, setFilteredSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedYear, setSelectedYear] = useState('all');
@@ -109,10 +110,12 @@ const AdminResults = ({ sidebarOpen }) => {
       const processedSubjects = (subjectsRes.data.subjects || []).map(subject => ({
         ...subject,
         year: subject.year || '1st Year',
-        semester: subject.semester || 1
+        semester: subject.semester || 1,
+        department: subject.department || 'General'
       }));
       
       setSubjects(processedSubjects);
+      setFilteredSubjects(processedSubjects);
       setStudents(studentsRes.data.users || []);
 
       // Extract unique departments from students
@@ -161,12 +164,38 @@ const AdminResults = ({ sidebarOpen }) => {
 
   const resetForm = () => {
     setFormData({ 
-      student: '', subject: '', year: '', semester: '', examType: 'final', marks: '' 
+      student: '', subject: '', year: '', semester: '', examType: 'final', marks: ''
     });
     setLockedFields({
       year: false,
       semester: false
     });
+    setFilteredSubjects(subjects);
+  };
+
+  // Handle student selection and filter subjects based on department
+  const handleStudentChange = (e) => {
+    const studentId = e.target.value;
+    const selectedStudent = students.find(s => s._id === studentId);
+    
+    setFormData(prev => ({
+      ...prev,
+      student: studentId
+    }));
+
+    if (selectedStudent && selectedStudent.department) {
+      // Filter subjects based on student's department
+      const deptSubjects = subjects.filter(s => 
+        s.department === selectedStudent.department || s.department === 'General'
+      );
+      setFilteredSubjects(deptSubjects);
+      
+      if (deptSubjects.length === 0) {
+        toast.info(`No subjects found for ${selectedStudent.department} department`);
+      }
+    } else {
+      setFilteredSubjects(subjects);
+    }
   };
 
   // Handle subject selection and auto-fill year and semester with locking
@@ -209,6 +238,14 @@ const AdminResults = ({ sidebarOpen }) => {
       semester: true
     });
     setShowEditModal(true);
+    
+    // Filter subjects for the student's department in edit mode
+    if (result.student?.department) {
+      const deptSubjects = subjects.filter(s => 
+        s.department === result.student.department || s.department === 'General'
+      );
+      setFilteredSubjects(deptSubjects);
+    }
   };
 
   const calculateGradeStatus = (marks) => {
@@ -1284,7 +1321,7 @@ const AdminResults = ({ sidebarOpen }) => {
               <select 
                 name="student" 
                 value={formData.student} 
-                onChange={handleInputChange} 
+                onChange={handleStudentChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
@@ -1306,13 +1343,15 @@ const AdminResults = ({ sidebarOpen }) => {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 <option value="">Choose a subject</option>
-                {subjects.map(s => (
+                {filteredSubjects.map(s => (
                   <option key={s._id} value={s._id}>
-                    {s.name} ({s.code}) - {s.year || 'No Year'} Sem {s.semester || 'N/A'}
+                    {s.name} ({s.code}) - {s.department} - {s.year || 'No Year'} Sem {s.semester || 'N/A'}
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-gray-500 mt-1">Year and semester will auto-fill and lock from selected subject</p>
+              {formData.student && filteredSubjects.length === 0 && (
+                <p className="text-xs text-red-500 mt-1">No subjects available for this student's department</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1414,7 +1453,7 @@ const AdminResults = ({ sidebarOpen }) => {
               <select 
                 name="student" 
                 value={formData.student} 
-                onChange={handleInputChange} 
+                onChange={handleStudentChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
@@ -1436,13 +1475,12 @@ const AdminResults = ({ sidebarOpen }) => {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 <option value="">Choose a subject</option>
-                {subjects.map(s => (
+                {filteredSubjects.map(s => (
                   <option key={s._id} value={s._id}>
-                    {s.name} ({s.code}) - {s.year || 'No Year'} Sem {s.semester || 'N/A'}
+                    {s.name} ({s.code}) - {s.department} - {s.year || 'No Year'} Sem {s.semester || 'N/A'}
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-gray-500 mt-1">Year and semester are locked based on subject</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
