@@ -95,6 +95,7 @@ function App() {
 function MainRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<Landing />} />
       {/* Public Routes */}
       <Route path="login" element={<Login />} />
       <Route path="register" element={<Register />} />

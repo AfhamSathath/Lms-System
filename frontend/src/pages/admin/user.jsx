@@ -34,8 +34,10 @@ const AdminUsers = ({ sidebarOpen }) => {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [departments, setDepartments] = useState([]);
   const [stats, setStats] = useState(null);
+
+  // Define departments
+  const departments = ['Computer Science', 'Software Engineering', 'Information Technology'];
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,7 +64,7 @@ const AdminUsers = ({ sidebarOpen }) => {
     password: '',
     role: 'student',
     studentId: '',
-    employeeId: '',
+    lecturerId: '',
     department: '',
     yearOfStudy: '',
     semester: '',
@@ -87,6 +89,7 @@ const AdminUsers = ({ sidebarOpen }) => {
     { value: 'registrar', label: 'Registrar', icon: '📋', color: 'bg-indigo-100 text-indigo-800' }
   ];
   const genders = ['male', 'female', 'other'];
+  
 
   useEffect(() => {
     fetchUsers();
@@ -165,10 +168,6 @@ const AdminUsers = ({ sidebarOpen }) => {
           newThisMonth,
           byYear
         });
-
-        // Extract unique departments
-        const uniqueDepts = [...new Set(usersData.map(u => u && u.department).filter(Boolean))];
-        setDepartments(uniqueDepts);
       } else {
         // Reset stats if no users
         setStats({
@@ -178,7 +177,6 @@ const AdminUsers = ({ sidebarOpen }) => {
           newThisMonth: 0,
           byYear: {}
         });
-        setDepartments([]);
       }
 
     } catch (err) {
@@ -225,7 +223,7 @@ const AdminUsers = ({ sidebarOpen }) => {
           u.name?.toLowerCase().includes(term) ||
           u.email?.toLowerCase().includes(term) ||
           u.studentId?.toLowerCase().includes(term) ||
-          u.employeeId?.toLowerCase().includes(term) ||
+          u.lecturerId?.toLowerCase().includes(term) ||
           u.department?.toLowerCase().includes(term)
         )
       );
@@ -241,7 +239,7 @@ const AdminUsers = ({ sidebarOpen }) => {
     const { name, value, type, checked } = e.target;
 
     // Auto-capitalize IDs
-    if (name === 'studentId' || name === 'employeeId') {
+    if (name === 'studentId' || name === 'lecturerId') {
       setFormData(prev => ({ ...prev, [name]: value.toUpperCase() }));
     } else {
       setFormData(prev => ({
@@ -258,7 +256,7 @@ const AdminUsers = ({ sidebarOpen }) => {
       password: '',
       role: 'student',
       studentId: '',
-      employeeId: '',
+      lecturerId: '',
       department: '',
       yearOfStudy: '',
       semester: '',
@@ -287,7 +285,7 @@ const AdminUsers = ({ sidebarOpen }) => {
       return;
     }
 
-    if (['lecturer', 'hod', 'dean'].includes(formData.role) && !formData.employeeId) {
+    if (['lecturer', 'hod', 'dean'].includes(formData.role) && !formData.lecturerId) {
       toast.error('Employee ID is required for staff');
       return;
     }
@@ -322,7 +320,7 @@ const AdminUsers = ({ sidebarOpen }) => {
       password: '',
       role: u.role || 'student',
       studentId: u.studentId || '',
-      employeeId: u.employeeId || '',
+      lecturerId: u.lecturerId || '',
       department: u.department || '',
       yearOfStudy: u.yearOfStudy || '',
       semester: u.semester || '',
@@ -461,7 +459,7 @@ const AdminUsers = ({ sidebarOpen }) => {
   };
 
   const handleDownloadTemplate = () => {
-    const csvContent = "name,email,password,role,studentId,employeeId,department,yearOfStudy,semester,phone,address\n" +
+    const csvContent = "name,email,password,role,studentId,lecturerId,department,yearOfStudy,semester,phone,address\n" +
       "John Doe,john@example.com,password123,student,STU001,,Computer Science,1,1,0771234567,Colombo\n" +
       "Jane Smith,jane@example.com,password123,lecturer,,LEC001,Computer Science,,,,Kandy\n" +
       "Admin User,admin@example.com,password123,admin,,,,,,,,\n" +
@@ -830,7 +828,7 @@ const AdminUsers = ({ sidebarOpen }) => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <span className="font-mono">
-                        {u.role === 'student' ? (u.studentId || '-') : (u.employeeId || '-')}
+                        {u.role === 'student' ? (u.studentId || '-') : (u.lecturerId || '-')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -1029,7 +1027,7 @@ const AdminUsers = ({ sidebarOpen }) => {
               required
             />
             <p className="mt-2 text-xs text-gray-500">
-              Upload CSV with columns: name, email, password, role, studentId, employeeId, department, yearOfStudy, semester, phone, address
+              Upload CSV with columns: name, email, password, role, studentId, lecturerId, department, yearOfStudy, semester, phone, address
             </p>
           </div>
 
@@ -1126,7 +1124,7 @@ const UserForm = ({
       ...prev,
       role,
       studentId: '',
-      employeeId: '',
+      lecturerId: '',
       yearOfStudy: '',
       semester: ''
     }));
@@ -1279,8 +1277,8 @@ const UserForm = ({
                   </label>
                   <input
                     type="text"
-                    name="employeeId"
-                    value={formData.employeeId}
+                    name="lecturerId"
+                    value={formData.lecturerId}
                     onChange={handleInputChange}
                     required
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 uppercase"
@@ -1319,15 +1317,18 @@ const UserForm = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Department <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 name="department"
                 value={formData.department}
                 onChange={handleInputChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="Computer Science"
-              />
+              >
+                <option value="">Select Department</option>
+                {departments.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
@@ -1484,7 +1485,7 @@ const UserProfile = ({ user, roles, onEdit, onToggleStatus, onClose, getRoleBadg
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">Student/Employee ID:</span>
               <span className="text-sm font-medium text-gray-900">
-                {user.studentId || user.employeeId}
+                {user.studentId || user.lecturerId || 'N/A'}
               </span>
             </div>
             {user.department && (

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import Loader from '../../components/common/loader';
 import Modal from '../../components/common/model';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { 
   FiAward, FiPlus, FiEdit2, FiTrash2, FiSearch, FiUser, FiDownload, FiFilter,
   FiBarChart2, FiPrinter, FiDownload as FiDownloadIcon, FiTrendingUp,
@@ -15,8 +17,7 @@ const gradePoints = {
   'A+': 4.0, 'A': 4.0, 'A-': 3.7,
   'B+': 3.3, 'B': 3.0, 'B-': 2.7,
   'C+': 2.3, 'C': 2.0, 'C-': 1.7,
-  'D+': 1.3, 'D': 1.0, 'E': 0.7,
-  'F': 0.0
+  'D+': 1.3, 'D': 1.0, 'E': 0.0,
 };
 
 const AdminResults = ({ sidebarOpen }) => {
@@ -107,8 +108,8 @@ const AdminResults = ({ sidebarOpen }) => {
       // Process subjects to ensure they have year and semester information
       const processedSubjects = (subjectsRes.data.subjects || []).map(subject => ({
         ...subject,
-        year: subject.year || '1st Year', // Default if not provided
-        semester: subject.semester || 1    // Default if not provided
+        year: subject.year || '1st Year',
+        semester: subject.semester || 1
       }));
       
       setSubjects(processedSubjects);
@@ -177,12 +178,10 @@ const AdminResults = ({ sidebarOpen }) => {
       setFormData(prev => ({
         ...prev,
         subject: subjectId,
-        // Auto-fill year and semester from the selected subject
         year: selectedSubject.year || prev.year,
         semester: selectedSubject.semester || prev.semester
       }));
       
-      // Lock the year and semester fields when subject is selected
       setLockedFields({
         year: true,
         semester: true
@@ -205,7 +204,6 @@ const AdminResults = ({ sidebarOpen }) => {
       examType: result.examType || 'final',
       marks: result.marks || ''
     });
-    // Lock fields in edit mode as well
     setLockedFields({
       year: true,
       semester: true
@@ -217,20 +215,20 @@ const AdminResults = ({ sidebarOpen }) => {
     const numMarks = parseFloat(marks) || 0;
     let grade;
     
-    if (numMarks >= 90) grade = 'A+';
-    else if (numMarks >= 85) grade = 'A';
-    else if (numMarks >= 80) grade = 'A-';
-    else if (numMarks >= 75) grade = 'B+';
-    else if (numMarks >= 70) grade = 'B';
-    else if (numMarks >= 65) grade = 'B-';
-    else if (numMarks >= 60) grade = 'C+';
-    else if (numMarks >= 55) grade = 'C';
-    else if (numMarks >= 50) grade = 'C-';
-    else if (numMarks >= 45) grade = 'D+';
-    else if (numMarks >= 40) grade = 'D';
-    else grade = 'F';
+    if (numMarks >= 75) grade = 'A+';
+    else if (numMarks >= 70) grade = 'A';
+    else if (numMarks >= 65) grade = 'A-';
+    else if (numMarks >= 60) grade = 'B+';
+    else if (numMarks >= 55) grade = 'B';
+    else if (numMarks >= 50) grade = 'B-';
+    else if (numMarks >= 45) grade = 'C+';
+    else if (numMarks >= 40) grade = 'C';
+    else if (numMarks >= 35) grade = 'C-';
+    else if (numMarks >= 30) grade = 'D+';
+    else if (numMarks >= 25) grade = 'D';
+    else grade = 'E';
 
-    const failGrades = ['D+', 'D', 'F'];
+    const failGrades = ['D+', 'D', 'E'];
     const status = failGrades.includes(grade) ? 'fail' : 'pass';
 
     return { grade, status };
@@ -273,7 +271,6 @@ const AdminResults = ({ sidebarOpen }) => {
     const yearlyGPAs = [];
     const studentResults = results.filter(r => r.student?._id === studentId);
     
-    // Group by academic year
     const yearGroups = {};
     studentResults.forEach(r => {
       if (!yearGroups[r.year]) {
@@ -283,7 +280,6 @@ const AdminResults = ({ sidebarOpen }) => {
     });
 
     for (const [year, yearResults] of Object.entries(yearGroups)) {
-      // Group by semester within year
       const semesterGPAs = [];
       for (let sem = 1; sem <= 2; sem++) {
         const semResults = yearResults.filter(r => r.semester === sem);
@@ -297,7 +293,6 @@ const AdminResults = ({ sidebarOpen }) => {
         }
       }
 
-      // Calculate year GPA (average of semester GPAs)
       const yearGPA = semesterGPAs.length > 0 
         ? (semesterGPAs.reduce((sum, sem) => sum + sem.gpa, 0) / semesterGPAs.length).toFixed(2)
         : '0.00';
@@ -310,7 +305,6 @@ const AdminResults = ({ sidebarOpen }) => {
       });
     }
 
-    // Sort by year order
     return yearlyGPAs.sort((a, b) => {
       const yearA = getYearNumber(a.year);
       const yearB = getYearNumber(b.year);
@@ -322,7 +316,6 @@ const AdminResults = ({ sidebarOpen }) => {
     const semesterGPAs = [];
     const studentResults = results.filter(r => r.student?._id === studentId);
     
-    // Group by year and semester
     const yearSemGroups = {};
     studentResults.forEach(r => {
       const key = `${r.year}-S${r.semester}`;
@@ -351,7 +344,6 @@ const AdminResults = ({ sidebarOpen }) => {
       });
     });
 
-    // Sort by year and semester
     return semesterGPAs.sort((a, b) => {
       const yearA = getYearNumber(a.year);
       const yearB = getYearNumber(b.year);
@@ -373,21 +365,17 @@ const AdminResults = ({ sidebarOpen }) => {
       const deptResults = results.filter(r => deptStudents.some(s => s._id === r.student?._id));
       
       if (deptStudents.length > 0) {
-        // Calculate department averages
         const avgCGPA = deptStudents.reduce((sum, s) => sum + parseFloat(calculateCGPA(s._id) || 0), 0) / deptStudents.length;
         
-        // Pass rate
         const passedResults = deptResults.filter(r => calculateGradeStatus(r.marks).status === 'pass').length;
         const passRate = deptResults.length > 0 ? (passedResults / deptResults.length) * 100 : 0;
         
-        // Grade distribution
         const gradeDist = {};
         deptResults.forEach(r => {
           const { grade } = calculateGradeStatus(r.marks);
           gradeDist[grade] = (gradeDist[grade] || 0) + 1;
         });
 
-        // Top performers
         const topPerformers = deptStudents
           .map(s => ({
             name: s.name,
@@ -398,7 +386,6 @@ const AdminResults = ({ sidebarOpen }) => {
           .sort((a, b) => b.cgpa - a.cgpa)
           .slice(0, 5);
 
-        // Year wise performance
         const yearPerformance = {};
         academicYears.forEach(year => {
           const yearResults = deptResults.filter(r => r.year === year);
@@ -432,7 +419,6 @@ const AdminResults = ({ sidebarOpen }) => {
       const yearStudents = [...new Set(yearResults.map(r => r.student?._id))];
       
       if (yearResults.length > 0) {
-        // Calculate semester-wise stats
         const semesterStats = {};
         for (let sem = 1; sem <= 2; sem++) {
           const semResults = yearResults.filter(r => r.semester === sem);
@@ -447,7 +433,6 @@ const AdminResults = ({ sidebarOpen }) => {
           }
         }
 
-        // Department performance for the year
         const deptPerformance = {};
         departments.forEach(dept => {
           const deptYearResults = yearResults.filter(r => 
@@ -480,20 +465,17 @@ const AdminResults = ({ sidebarOpen }) => {
     
     if (studentResults.length === 0) return null;
 
-    // Calculate overall statistics
     const totalSubjects = studentResults.length;
     const passedSubjects = studentResults.filter(r => calculateGradeStatus(r.marks).status === 'pass').length;
     const failedSubjects = totalSubjects - passedSubjects;
     const passPercentage = (passedSubjects / totalSubjects) * 100;
 
-    // Grade distribution
     const gradeDistribution = {};
     studentResults.forEach(r => {
       const { grade } = calculateGradeStatus(r.marks);
       gradeDistribution[grade] = (gradeDistribution[grade] || 0) + 1;
     });
 
-    // Subject-wise performance
     const subjectPerformance = {};
     studentResults.forEach(r => {
       if (!subjectPerformance[r.subject?.name]) {
@@ -510,12 +492,10 @@ const AdminResults = ({ sidebarOpen }) => {
       subjectPerformance[r.subject?.name].worst = Math.min(subjectPerformance[r.subject?.name].worst, r.marks);
     });
 
-    // Calculate averages
     Object.keys(subjectPerformance).forEach(subject => {
       subjectPerformance[subject].average = (subjectPerformance[subject].total / subjectPerformance[subject].count).toFixed(2);
     });
 
-    // Year-Semester trends
     const yearSemesterTrends = [];
     academicYears.forEach(year => {
       for (let sem = 1; sem <= 2; sem++) {
@@ -533,13 +513,11 @@ const AdminResults = ({ sidebarOpen }) => {
       }
     });
 
-    // Best and worst performing subjects
     const bestSubject = Object.entries(subjectPerformance)
       .sort((a, b) => b[1].average - a[1].average)[0];
     const worstSubject = Object.entries(subjectPerformance)
       .sort((a, b) => a[1].average - b[1].average)[0];
 
-    // Exam type performance
     const examTypePerformance = {};
     studentResults.forEach(r => {
       if (!examTypePerformance[r.examType]) {
@@ -556,7 +534,6 @@ const AdminResults = ({ sidebarOpen }) => {
       examTypePerformance[type].average = (examTypePerformance[type].total / examTypePerformance[type].count).toFixed(2);
     });
 
-    // Calculate improvement trend
     let improvementTrend = 'stable';
     if (yearSemesterTrends.length >= 2) {
       const firstAvg = parseFloat(yearSemesterTrends[0].averageMarks);
@@ -565,7 +542,6 @@ const AdminResults = ({ sidebarOpen }) => {
       else if (lastAvg < firstAvg - 5) improvementTrend = 'declining';
     }
 
-    // Calculate CGPA
     const cgpa = calculateCGPA(studentId);
 
     return {
@@ -593,7 +569,6 @@ const AdminResults = ({ sidebarOpen }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    // Prevent changes to locked fields
     if (lockedFields[name]) {
       toast.error(`${name} is locked and cannot be modified`);
       return;
@@ -707,7 +682,54 @@ const AdminResults = ({ sidebarOpen }) => {
     document.body.innerHTML = printContent.outerHTML;
     window.print();
     document.body.innerHTML = originalContents;
-    window.location.reload(); // Reload to restore React functionality
+    window.location.reload();
+  };
+
+  // PDF Download Function
+  const handleDownloadTranscriptPDF = async () => {
+    const input = document.getElementById('transcript-content');
+    if (!input) return;
+
+    toast.loading('Generating PDF...', { id: 'pdf' });
+
+    try {
+      const canvas = await html2canvas(input, { 
+        scale: 2,
+        backgroundColor: '#ffffff',
+        logging: false,
+        allowTaint: true,
+        useCORS: true
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      
+      const width = imgWidth * ratio;
+      const height = imgHeight * ratio;
+      
+      const x = (pdfWidth - width) / 2;
+      const y = (pdfHeight - height) / 2;
+
+      pdf.addImage(imgData, 'PNG', x, y, width, height);
+      pdf.save(`transcript_${selectedStudent?.studentId || 'student'}.pdf`);
+      
+      toast.success('PDF downloaded successfully!', { id: 'pdf' });
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast.error('Failed to generate PDF', { id: 'pdf' });
+    }
   };
 
   const handleDownloadTranscript = () => {
@@ -802,7 +824,6 @@ const AdminResults = ({ sidebarOpen }) => {
             ? (yearResults.reduce((sum, r) => sum + r.marks, 0) / yearResults.length).toFixed(2)
             : '0.00';
           
-          // Calculate semester breakdown
           const sem1Results = yearResults.filter(r => r.semester === 1).length;
           const sem2Results = yearResults.filter(r => r.semester === 2).length;
           
@@ -1549,8 +1570,9 @@ const AdminResults = ({ sidebarOpen }) => {
         <div id="transcript-content" className="p-6 bg-white">
           {/* Header */}
           <div className="text-center mb-8">
+            <img src="/public/esn.webp" alt="University Logo" className="mx-auto mb-2 h-16"/>
             <h2 className="text-2xl font-bold text-gray-900">Academic Transcript</h2>
-            <p className="text-gray-600">University Name</p>
+            <p className="text-gray-600">Trincomalee Campus ,Eastern University Of SriLanka</p>
           </div>
 
           {/* Student Info */}
@@ -1587,7 +1609,6 @@ const AdminResults = ({ sidebarOpen }) => {
                       <span className="font-medium">{sem.displayName}</span>
                       <span className="text-purple-600 font-semibold">GPA: {sem.gpa}</span>
                     </div>
-                    {/* GPA Progress Bar */}
                     <div className="w-full bg-gray-200 rounded-full h-2.5">
                       <div 
                         className="bg-purple-600 h-2.5 rounded-full transition-all duration-300"
@@ -1657,10 +1678,10 @@ const AdminResults = ({ sidebarOpen }) => {
             <FiPrinter className="mr-2" /> Print
           </button>
           <button
-            onClick={handleDownloadTranscript}
+            onClick={handleDownloadTranscriptPDF}
             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center"
           >
-            <FiDownloadIcon className="mr-2" /> Download
+            <FiDownloadIcon className="mr-2" /> Download PDF
           </button>
           <button
             onClick={() => { setShowTranscriptModal(false); setSelectedStudent(null); }}
