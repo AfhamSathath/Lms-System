@@ -19,6 +19,8 @@ const enrollmentRoutes = require('./routes/enrollmentRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const activityRoutes = require('./routes/activityRoutes');
+const userroutes = require('./routes/userroutes');
+const authRoutes = require('./routes/authroutes');
 
 // Load environment variables
 dotenv.config();
@@ -210,10 +212,10 @@ app.get('/api', (req, res) => {
 // ================= API ROUTES =================
 
 // Auth routes - handles authentication and user management
-app.use('/api/auth', require('./routes/authroutes'));
+app.use('/api/auth', authRoutes);
 
 // User routes - for additional user-related operations
-app.use('/api/users', require('./routes/userroutes'));
+app.use('/api/users', userroutes);
 
 // Other routes
 app.use('/api/subjects',courseRoutes);
