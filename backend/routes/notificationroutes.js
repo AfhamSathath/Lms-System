@@ -3,8 +3,6 @@ const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
 const controller = require('../controllers/notificationController');
 
-
-
 router.use(protect);
 
 router.get('/', controller.getNotifications);

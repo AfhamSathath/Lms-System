@@ -41,7 +41,7 @@ const notificationSchema = new mongoose.Schema(
     },
 
     link: {
-      type: String, // where frontend redirects
+      type: String, // frontend redirect link
     },
 
     isRead: {
@@ -55,7 +55,7 @@ const notificationSchema = new mongoose.Schema(
 
     expiresAt: {
       type: Date,
-      index: { expireAfterSeconds: 0 }, // TTL
+      index: { expireAfterSeconds: 0 }, // auto delete
     },
   },
   { timestamps: true }
