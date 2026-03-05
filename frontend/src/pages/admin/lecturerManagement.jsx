@@ -376,6 +376,14 @@ const LecturerManagement = ({ sidebarOpen }) => {
 const AssignModal = ({ isOpen, onClose, formData, setFormData, onSubmit, lecturers, subjects, departments }) => {
   if (!isOpen) return null;
 
+  // Allowed departments - filtered list
+  const ALLOWED_DEPARTMENTS = ['Computer Science', 'Software Engineering', 'Information Technology'];
+  
+  // Filter departments to only show allowed ones
+  const allowedDepts = departments.filter(d => 
+    ALLOWED_DEPARTMENTS.includes(d.name)
+  );
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -419,7 +427,8 @@ const AssignModal = ({ isOpen, onClose, formData, setFormData, onSubmit, lecture
                     const deptIdentifier = selectedSubject.department; // could be name, code or (unexpected) id
 
                     // look up the department by id first, then by code/name (case‑insensitive)
-                    const matchedDept = departments.find(d =>
+                    // but only from the allowed departments list
+                    const matchedDept = allowedDepts.find(d =>
                       // match by id (string compare), code or name
                       d._id?.toString() === deptIdentifier ||
                       d.code?.toLowerCase() === deptIdentifier.toLowerCase() ||
@@ -430,8 +439,8 @@ const AssignModal = ({ isOpen, onClose, formData, setFormData, onSubmit, lecture
                       selectedDepartmentId = matchedDept._id;
                       autoResolved = true;
                     } else {
-                      // couldn't resolve automatically, user will have to pick
-                      toast.error('Department for selected subject not found; please choose manually');
+                      // couldn't resolve automatically, user will have to pick from allowed ones
+                      toast.error('Subject department is not in allowed list. Please select from: Computer Science, Software Engineering, Information Technology');
                     }
                   }
 
@@ -461,14 +470,31 @@ const AssignModal = ({ isOpen, onClose, formData, setFormData, onSubmit, lecture
                 onChange={(e) => setFormData(p => ({ ...p, departmentId: e.target.value }))}
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 required
-                // only lock the department selector when we have both a subject and a resolved department
-                disabled={!!formData.subjectId && !!formData.departmentId}
+                disabled={!!formData.departmentId && !!formData.subjectId}
               >
                 <option value="">Select Department</option>
-                {departments.map(d => (
-                  <option key={d._id} value={d._id}>{d.name}</option>
-                ))}
+                {allowedDepts.length > 0 ? (
+                  allowedDepts.map(d => (
+                    <option key={d._id} value={d._id}>{d.name}</option>
+                  ))
+                ) : (
+                  <>
+                    {departments.filter(d => ALLOWED_DEPARTMENTS.includes(d.name)).map(d => (
+                      <option key={d._id} value={d._id}>{d.name}</option>
+                    ))}
+                    {departments.filter(d => ALLOWED_DEPARTMENTS.includes(d.name)).length === 0 && (
+                      <>
+                        <option value="cs">Computer Science</option>
+                        <option value="se">Software Engineering</option>
+                        <option value="it">Information Technology</option>
+                      </>
+                    )}
+                  </>
+                )}
               </select>
+              {formData.departmentId && formData.subjectId && (
+                <p className="text-xs text-gray-500 mt-1">✓ Auto-selected & locked</p>
+              )}
             </div>
 
             <div>
