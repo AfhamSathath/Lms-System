@@ -22,13 +22,15 @@ exports.assignLecturerToSubject = async (req, res) => {
     // Check if Lecturer exists
     const lecturer = await User.findById(lecturerId);
     if (!lecturer) {
-      return res.status(404).json({ error: 'Lecturer not found' });
+      console.log('Lecturer not found for ID:', lecturerId);
+      return res.status(404).json({ error: `Lecturer with ID ${lecturerId} not found` });
     }
 
     // Check if Subject exists
     const subject = await Subject.findById(subjectId);
     if (!subject) {
-      return res.status(404).json({ error: 'Subject not found' });
+      console.log('Subject not found for ID:', subjectId);
+      return res.status(404).json({ error: `Subject with ID ${subjectId} not found` });
     }
 
     // Use department string directly

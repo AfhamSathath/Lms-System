@@ -12,6 +12,6 @@ router.put('/:id/read', controller.markAsRead);
 router.delete('/clear-all', controller.clearAll);
 router.delete('/:id', controller.deleteNotification);
 
-router.post('/send', authorize('admin'), controller.sendNotification);
+router.post('/send', authorize('admin', 'hod', 'dean'), controller.sendNotification);
 
 module.exports = router;

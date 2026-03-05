@@ -447,7 +447,7 @@ const AssignModal = ({ isOpen, onClose, formData, setFormData, onSubmit, lecture
                   setFormData(p => ({
                     ...p,
                     subjectId: subjId,
-                    departmentId: autoResolved ? selectedDepartmentId : '',
+                    departmentId: autoResolved ? matchedDept.name : '',
                     academicYear: selectedSubject?.year || '',
                     semester: selectedSubject?.semester ? selectedSubject.semester.toString() : ''
                   }));
@@ -474,7 +474,7 @@ const AssignModal = ({ isOpen, onClose, formData, setFormData, onSubmit, lecture
                 <option value="">Select Department</option>
                 {allowedDepts.length > 0 ? (
                   allowedDepts.map(d => (
-                    <option key={d._id} value={d._id}>{d.name}</option>
+                    <option key={d._id} value={d.name}>{d.name}</option>
                   ))
                 ) : (
                   <>
