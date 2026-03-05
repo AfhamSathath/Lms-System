@@ -315,7 +315,7 @@ const AdminSubjects = ({ sidebarOpen }) => {
   // Fetch subjects by department for grouped view
   const fetchSubjectsByDepartment = async (department) => {
     try {
-      const res = await api.get(`/subjects/department/${department}`);
+      const res = await api.get(`/api/subjects/department/${department}`);
       setGroupedSubjects(res.data.subjects);
       setSelectedDepartmentView(department);
       setShowDepartmentViewModal(true);

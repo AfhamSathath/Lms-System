@@ -729,4 +729,6 @@ enrollmentSchema.virtual('studentDetails', {
   justOne: true
 });
 
-module.exports = mongoose.model('Enrollment', enrollmentSchema);
+const Enrollment = mongoose.models.Enrollment || mongoose.model('Enrollment', enrollmentSchema);
+
+module.exports = Enrollment;

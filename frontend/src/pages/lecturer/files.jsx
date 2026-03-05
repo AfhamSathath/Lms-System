@@ -28,8 +28,8 @@ const LecturerFiles = () => {
   const fetchData = async () => {
     try {
       const [filesRes, subjectsRes] = await Promise.all([
-        api.get('/files'),
-        api.get('/subjects')
+        api.get('/api/files'),
+        api.get('/api/subjects')
       ]);
       setFiles(filesRes.data.files);
       setSubjects(subjectsRes.data.subjects);

@@ -39,12 +39,12 @@ const StudentDashboard = () => {
     if (!user?._id) return;
     try {
       const [subjectsRes, resultsRes, filesRes, timetablesRes, notificationsRes, unreadRes] = await Promise.all([
-        api.get('/subjects'),
-        api.get(`/results/student/${user._id}`),
-        api.get('/files'),
-        api.get('/timetables/upcoming'),
-        api.get('/notifications'),
-        api.get('/notifications/unread-count')
+        api.get('/api/subjects'),
+        api.get(`/api/results/student/${user._id}`),
+        api.get('/api/files'),
+        api.get('/api/timetables/upcoming'),
+        api.get('/api/notifications'),
+        api.get('/api/notifications/unread-count')
       ]);
 
       setStats({

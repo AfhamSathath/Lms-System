@@ -31,8 +31,8 @@ const LecturerDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       const [subjectsRes, filesRes] = await Promise.all([
-        api.get('/subjects'),
-        api.get('/files')
+        api.get('/api/subjects'),
+        api.get('/api/files')
       ]);
 
       setStats({

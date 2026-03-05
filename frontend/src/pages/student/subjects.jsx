@@ -17,7 +17,7 @@ const StudentSubjects = () => {
 
   const fetchSubjects = async () => {
     try {
-      const response = await api.get(`/subjects/semester/${selectedSemester}`);
+      const response = await api.get(`/api/subjects/semester/${selectedSemester}`);
       setSubjects(response.data.subjects);
     } catch (error) {
       console.error('Error fetching subjects:', error);
