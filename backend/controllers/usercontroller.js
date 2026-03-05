@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const emailService = require('../utils/emailService');
 const fs = require('fs');
+const path = require('path');
 const csv = require('csv-parser');
 
 // Generate JWT Token
@@ -107,6 +108,59 @@ exports.updateProfile = async (req, res, next) => {
     const user = await User.findByIdAndUpdate(req.user.id, req.body, { new: true, runValidators: true }).select('-password');
     res.json({ success: true, user });
   } catch (error) { next(error); }
+};
+
+exports.updateProfilePicture = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Please upload an image' });
+    }
+
+    const user = await User.findById(req.user.id);
+
+    // Delete old picture if exists
+    if (user.profilePicture && !user.profilePicture.startsWith('http')) {
+      const oldPath = path.join(__dirname, '..', user.profilePicture);
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
+    }
+
+    const filePath = `/uploads/profiles/${req.file.filename}`;
+    user.profilePicture = filePath;
+    await user.save({ validateBeforeSave: false });
+
+    res.json({
+      success: true,
+      profilePicture: filePath,
+      user
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.deleteProfilePicture = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (user.profilePicture && !user.profilePicture.startsWith('http')) {
+      const oldPath = path.join(__dirname, '..', user.profilePicture);
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
+    }
+
+    user.profilePicture = null;
+    await user.save({ validateBeforeSave: false });
+
+    res.json({
+      success: true,
+      message: 'Profile picture removed'
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 exports.updatePassword = async (req, res, next) => {

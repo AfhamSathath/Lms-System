@@ -13,15 +13,15 @@ const ProfilePictureUpload = ({ currentPicture, userName, onUpdate }) => {
   // Get the full URL for the profile picture
   const getImageUrl = (path) => {
     if (!path) return null;
-    
+
     // If it's already a full URL, return as is
     if (path.startsWith('http')) return path;
-    
+
     // If it's a relative path starting with /uploads
     if (path.startsWith('/uploads')) {
       return `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}${path}`;
     }
-    
+
     // If it's just a filename
     return `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/uploads/profiles/${path}`;
   };
@@ -71,18 +71,18 @@ const ProfilePictureUpload = ({ currentPicture, userName, onUpdate }) => {
 
     setUploading(true);
     try {
-      const response = await api.post('/users/profile/picture', formData, {
+      const response = await api.post('/api/users/profile/picture', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       console.log('Upload response:', response.data);
 
       toast.success('Profile picture updated successfully');
-      
+
       // Pass the full URL to parent
       const pictureUrl = response.data.profilePicture;
       onUpdate(pictureUrl);
-      
+
       setShowModal(false);
       setPreview(null);
       setImageError(false);
@@ -99,7 +99,7 @@ const ProfilePictureUpload = ({ currentPicture, userName, onUpdate }) => {
 
     setUploading(true);
     try {
-      await api.delete('/users/profile/picture');
+      await api.delete('/api/users/profile/picture');
       toast.success('Profile picture removed');
       onUpdate(null);
       setShowModal(false);
@@ -168,7 +168,7 @@ const ProfilePictureUpload = ({ currentPicture, userName, onUpdate }) => {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4">
             {/* Backdrop */}
-            <div 
+            <div
               className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
               onClick={handleCancel}
             ></div>

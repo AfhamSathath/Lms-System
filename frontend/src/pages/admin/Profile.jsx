@@ -4,11 +4,11 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import Loader from '../../components/common/loader';
 import ProfilePictureUpload from '../../components/common/ProfilePictureUpload';
-import { 
-  FiUser, 
-  FiMail, 
-  FiPhone, 
-  FiMapPin, 
+import {
+  FiUser,
+  FiMail,
+  FiPhone,
+  FiMapPin,
   FiEdit2,
   FiSave,
   FiX,
@@ -26,7 +26,7 @@ const AdminProfile = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
@@ -59,7 +59,7 @@ const AdminProfile = () => {
     setLoading(true);
 
     try {
-      const response = await api.put('/users/profile', formData);
+      const response = await api.put('/api/users/profile', formData);
       updateUser(response.data.user);
       toast.success('Profile updated successfully');
       setIsEditing(false);
@@ -85,7 +85,7 @@ const AdminProfile = () => {
 
     setLoading(true);
     try {
-      await api.put('/users/change-password', {
+      await api.put(`/api/users/${user._id}/update-password`, {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword,
       });
@@ -354,7 +354,7 @@ const AdminProfile = () => {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4">
             <div className="fixed inset-0 bg-black opacity-50" onClick={() => setShowPasswordModal(false)}></div>
-            
+
             <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold text-gray-900">Change Password</h3>

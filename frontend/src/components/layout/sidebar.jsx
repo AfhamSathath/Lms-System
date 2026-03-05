@@ -25,33 +25,33 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     switch (user.role) {
       case 'student':
         return [...common,
-          { name: 'My Subjects', path: 'subjects', icon: FiBook },
-          { name: 'My Results', path: 'results', icon: FiAward },
-          { name: 'Study Materials', path: 'files', icon: FiFile },
-          { name: 'Exam Timetable', path: 'timetable', icon: FiCalendar },
-          { name: 'Notifications', path: 'notifications', icon: FiBell },
-          { name: 'My Profile', path: 'profile', icon: FiUser }
+        { name: 'My Subjects', path: 'subjects', icon: FiBook },
+        { name: 'My Results', path: 'results', icon: FiAward },
+        { name: 'Study Materials', path: 'files', icon: FiFile },
+        { name: 'Exam Timetable', path: 'timetable', icon: FiCalendar },
+        { name: 'Notifications', path: 'notifications', icon: FiBell },
+        { name: 'My Profile', path: 'profile', icon: FiUser }
         ];
       case 'lecturer':
         return [...common,
-          { name: 'My Subjects', path: 'subjects', icon: FiBook },
-          { name: 'Upload Materials', path: 'files', icon: FiUpload },
-          { name: 'Subject Materials', path: 'subjectMaterials', icon: FiFile },
-          { name: 'Exam Schedule', path: 'timetable', icon: FiCalendar },
-          { name: 'Student Results', path: 'results', icon: FiBarChart2 },
-          { name: 'Notifications', path: 'notifications', icon: FiBell },
-          { name: 'My Profile', path: 'profile', icon: FiUser }
+        { name: 'My Subjects', path: 'subjects', icon: FiBook },
+        { name: 'Upload Materials', path: 'files', icon: FiUpload },
+        { name: 'Subject Materials', path: 'subjectMaterials', icon: FiFile },
+        { name: 'Exam Schedule', path: 'timetable', icon: FiCalendar },
+        { name: 'Student Results', path: 'results', icon: FiBarChart2 },
+        { name: 'Notifications', path: 'notifications', icon: FiBell },
+        { name: 'My Profile', path: 'profile', icon: FiUser }
         ];
       case 'admin':
         return [...common,
-          { name: 'User Management', path: 'users', icon: FiUsers },
-          { name: 'Lecturer Management', path: 'lecturers', icon: FiUsers },
-          { name: 'Subject Management', path: 'subjects', icon: FiBook },
-          { name: 'Result Management', path: 'results', icon: FiAward },
-          { name: 'Timetable Management', path: 'timetables', icon: FiCalendar },
-          { name: 'File Management', path: 'files', icon: FiFile },
-          { name: 'Notifications', path: 'notifications', icon: FiBell },
-          { name: 'My Profile', path: 'profile', icon: FiUser }
+        { name: 'User Management', path: 'users', icon: FiUsers },
+        { name: 'Lecturer Management', path: 'lecturers', icon: FiUsers },
+        { name: 'Subject Management', path: 'subjects', icon: FiBook },
+        { name: 'Result Management', path: 'results', icon: FiAward },
+        { name: 'Timetable Management', path: 'timetables', icon: FiCalendar },
+        { name: 'File Management', path: 'files', icon: FiFile },
+        { name: 'Notifications', path: 'notifications', icon: FiBell },
+        { name: 'My Profile', path: 'profile', icon: FiUser }
         ];
       default: return common;
     }
@@ -61,6 +61,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
   const getUserInitials = () =>
     user?.name ? user.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : 'U';
+
+  const getImageUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+    return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+  };
 
   const getRoleColor = () => {
     switch (user?.role) {
@@ -118,9 +125,17 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         {/* User info */}
         <div className={`border-b border-gray-200 py-3 ${isOpen ? 'px-3' : 'px-1'}`}>
           <div className="flex items-center min-w-0">
-            <div className={`bg-gradient-to-r ${getRoleColor()} rounded-full flex items-center justify-center
+            <div className={`bg-gradient-to-r ${getRoleColor()} rounded-full flex items-center justify-center overflow-hidden
               ${isOpen ? 'w-10 h-10' : 'w-8 h-8'}`}>
-              <span className="text-white font-semibold text-sm truncate">{getUserInitials()}</span>
+              {user.profilePicture ? (
+                <img
+                  src={getImageUrl(user.profilePicture)}
+                  alt={user.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-white font-semibold text-sm truncate">{getUserInitials()}</span>
+              )}
             </div>
             {isOpen && (
               <div className="ml-2 min-w-0 overflow-hidden">

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/Authcontext';
 import api from '../../services/api';
 import { FiMenu, FiBell, FiUser, FiLogOut, FiChevronDown, FiHome } from 'react-icons/fi';
-import Sidebar from './Sidebar';
+import Sidebar from './sidebar';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -59,7 +59,7 @@ const Navbar = () => {
 
   const getDashboardPath = () => {
     if (!user) return '/';
-    switch(user.role){
+    switch (user.role) {
       case 'admin': return '/admin/dashboard';
       case 'lecturer': return '/lecturer/dashboard';
       case 'student': return '/student/dashboard';
@@ -69,7 +69,7 @@ const Navbar = () => {
 
   const getProfilePath = () => {
     if (!user) return '/';
-    switch(user.role){
+    switch (user.role) {
       case 'admin': return '/admin/profile';
       case 'lecturer': return '/lecturer/profile';
       case 'student': return '/student/profile';
@@ -78,6 +78,22 @@ const Navbar = () => {
   };
 
   const getInitials = (name) => name ? name.charAt(0).toUpperCase() : 'U';
+
+  const getImageUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+    return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+  };
+
+  const getRoleColor = () => {
+    switch (user?.role) {
+      case 'student': return 'bg-blue-600';
+      case 'lecturer': return 'bg-green-600';
+      case 'admin': return 'bg-purple-600';
+      default: return 'bg-gray-600';
+    }
+  };
 
   // Close profile menu when clicking outside
   useEffect(() => {
@@ -140,11 +156,19 @@ const Navbar = () => {
 
               {/* Profile */}
               <div className="relative" ref={profileMenuRef}>
-                <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="flex items-center space-x-2 p-1.5 text-gray-600 hover:text-purple-600 hover:bg-gray-100 rounded-lg">
-                  <div className="h-8 w-8 bg-purple-600 rounded-full flex items-center justify-center">
-                    <span className="text-white font-medium text-sm">{getInitials(user.name)}</span>
+                <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="flex items-center space-x-2 p-1.5 text-gray-600 hover:text-purple-600 hover:bg-gray-100 rounded-lg transition-all">
+                  <div className={`h-8 w-8 ${getRoleColor()} rounded-full flex items-center justify-center overflow-hidden ring-2 ring-white shadow-sm`}>
+                    {user.profilePicture ? (
+                      <img
+                        src={getImageUrl(user.profilePicture)}
+                        alt={user.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-white font-medium text-sm">{getInitials(user.name)}</span>
+                    )}
                   </div>
-                  <FiChevronDown className={`h-4 w-4 ${showProfileMenu ? 'rotate-180' : ''}`} />
+                  <FiChevronDown className={`h-4 w-4 transition-transform duration-200 ${showProfileMenu ? 'rotate-180' : ''}`} />
                 </button>
 
                 {showProfileMenu && (

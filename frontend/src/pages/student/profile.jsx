@@ -3,18 +3,19 @@ import { useAuth } from '../../context/Authcontext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import Loader from '../../components/common/loader';
-import { 
-  FiUser, 
-  FiMail, 
-  FiPhone, 
-  FiMapPin, 
-  FiBook, 
+import {
+  FiUser,
+  FiMail,
+  FiPhone,
+  FiMapPin,
+  FiBook,
   FiHash,
   FiEdit2,
   FiSave,
   FiX,
   FiCamera
 } from 'react-icons/fi';
+import ProfilePictureUpload from '../../components/common/ProfilePictureUpload';
 
 const StudentProfile = () => {
   const { user, updateUser } = useAuth();
@@ -38,7 +39,7 @@ const StudentProfile = () => {
     setLoading(true);
 
     try {
-      const response = await api.put('/users/profile', formData);
+      const response = await api.put('/api/users/profile', formData);
       updateUser(response.data.user);
       toast.success('Profile updated successfully');
       setIsEditing(false);
@@ -58,6 +59,10 @@ const StudentProfile = () => {
     setIsEditing(false);
   };
 
+  const handleProfilePictureUpdate = (pictureUrl) => {
+    updateUser({ ...user, profilePicture: pictureUrl });
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
@@ -74,20 +79,13 @@ const StudentProfile = () => {
 
           {/* Profile Info */}
           <div className="relative px-6 pb-6">
-            {/* Avatar */}
+            {/* Avatar with Upload */}
             <div className="relative -mt-16 mb-4">
-              <div className="inline-block">
-                <div className="h-24 w-24 rounded-full bg-white p-1">
-                  <div className="h-full w-full rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
-                    <span className="text-3xl font-bold text-white">
-                      {user?.name?.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                </div>
-                <button className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors">
-                  <FiCamera className="h-4 w-4" />
-                </button>
-              </div>
+              <ProfilePictureUpload
+                currentPicture={user?.profilePicture}
+                userName={user?.name}
+                onUpdate={handleProfilePictureUpdate}
+              />
             </div>
 
             {/* Edit Toggle */}

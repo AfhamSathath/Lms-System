@@ -65,7 +65,7 @@ function App() {
             />
           </Routes>
 
-          <Toaster 
+          <Toaster
             position="top-right"
             toastOptions={{
               duration: 4000,
@@ -102,7 +102,7 @@ function MainRoutes() {
       {/* Public Routes */}
       <Route path="login" element={<Login />} />
       <Route path="register" element={<Register />} />
-      
+
       {/* Student Routes */}
       <Route path="student" element={<PrivateRoute role="student" />}>
         <Route path="dashboard" element={<StudentDashboard />} />

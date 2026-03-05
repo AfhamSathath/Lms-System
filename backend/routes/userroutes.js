@@ -4,8 +4,36 @@ const router = express.Router();
 const { body } = require('express-validator');
 const userController = require('../controllers/userController');
 const { protect, authorize } = require('../middleware/auth');
+const path = require('path');
 const multer = require('multer');
+
+// Configure storage for general files (default)
 const upload = multer({ dest: 'uploads/' });
+
+// Configure storage for profile pictures
+const profileStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/profiles/');
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'profile-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const uploadProfile = multer({
+  storage: profileStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|gif/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Only image files are allowed!'));
+  }
+});
 
 // ---------------- AUTH ROUTES ----------------
 
@@ -45,16 +73,21 @@ router.post(
 
 // Forgot & Reset Password
 router.post('/', userController.createUser);
+// Static Routes first to avoid shadowing by /:id
 router.get('/users', userController.getUsers);
+router.put('/profile', protect, userController.updateProfile);
+router.post('/profile/picture', protect, uploadProfile.single('profilePicture'), userController.updateProfilePicture);
+router.delete('/profile/picture', protect, userController.deleteProfilePicture);
+router.get('/', userController.getUserByRole);
+
+// Parameter Routes
 router.delete('/:id', userController.deleteUser);
 router.put('/:id', userController.updateUser);
 router.put('/:id/admin-reset-password', userController.adminResetPassword);
 router.put('/:id/update-profile', protect, userController.updateProfile);
-router.put('/profile', protect, userController.updateProfile);
 router.put('/:id/update-password', protect, userController.updatePassword);
 router.put('/:id/toggle-status', userController.toggleUserStatus);
 router.post('/:id/reset-password', userController.resetPassword);
-router.get('/', userController.getUserByRole);
 
 // Bulk import & CSV export
 router.post('/bulk-import', upload.single('file'), userController.bulkImportUsers);
