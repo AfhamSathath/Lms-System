@@ -8,8 +8,7 @@ const subjectFileSchema = new mongoose.Schema({
   },
 
   department: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Department',
+    type: String,
     required: [true, 'Department is required']
   },
 
@@ -143,7 +142,7 @@ const subjectFileSchema = new mongoose.Schema({
 });
 
 // Virtual for display file size
-subjectFileSchema.virtual('displayFileSize').get(function() {
+subjectFileSchema.virtual('displayFileSize').get(function () {
   const sizes = ['B', 'KB', 'MB', 'GB'];
   if (this.fileSize === 0) return '0 B';
   const i = Math.floor(Math.log(this.fileSize) / Math.log(1024));

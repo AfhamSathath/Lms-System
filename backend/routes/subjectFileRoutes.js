@@ -8,7 +8,8 @@ const {
   downloadSubjectFile,
   deleteSubjectFile,
   getCurriculumFiles,
-  getFileStatistics
+  getFileStatistics,
+  getAllFiles
 } = require('../controllers/subjectFileController');
 const { protect, authorize } = require('../middleware/auth');
 const { upload } = require('../middleware/upload');
@@ -16,6 +17,9 @@ const { upload } = require('../middleware/upload');
 /* =====================================================
    Subject File Routes
 ===================================================== */
+
+// Get all subject files
+router.get('/', protect, getAllFiles);
 
 // Upload subject file
 router.post('/upload', protect, authorize('lecturer', 'hod', 'admin'), upload, uploadSubjectFile);

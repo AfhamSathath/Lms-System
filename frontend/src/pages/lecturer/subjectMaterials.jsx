@@ -90,10 +90,22 @@ const SubjectMaterials = ({ sidebarOpen }) => {
     });
   }, [state.files, filters]);
 
+  const handleSubjectChange = (e) => {
+    const subjectId = e.target.value;
+    const subject = state.subjects.find(s => s._id === subjectId);
+
+    setUploadForm(prev => ({
+      ...prev,
+      subjectId,
+      semester: subject?.semester || prev.semester,
+      academicYear: subject?.year || prev.academicYear
+    }));
+  };
+
   const handleUpload = async (e) => {
     e.preventDefault();
 
-    if (!uploadForm.file || !uploadForm.subjectId || !uploadForm.title) {
+    if (!uploadForm.file || !uploadForm.subjectId || !uploadForm.title || !uploadForm.academicYear || !uploadForm.semester) {
       toast.error('Please fill required fields');
       return;
     }
@@ -109,7 +121,9 @@ const SubjectMaterials = ({ sidebarOpen }) => {
     formData.append('topic', uploadForm.topic);
     formData.append('weekNumber', uploadForm.weekNumber);
     formData.append('tags', JSON.stringify(uploadForm.tags.split(',').map(t => t.trim())));
-    formData.append('departmentId', state.subjects.find(s => s._id === uploadForm.subjectId)?.department || '');
+
+    const selectedSub = state.subjects.find(s => s._id === uploadForm.subjectId);
+    formData.append('departmentId', selectedSub?.department || '');
 
     try {
       await api.post('/api/subject-files/upload', formData, {
@@ -157,6 +171,27 @@ const SubjectMaterials = ({ sidebarOpen }) => {
       toggleModal('curriculumCheck', true);
     } catch (error) {
       toast.error('Failed to check curriculum');
+    }
+  };
+
+  const handleDownload = async (fileId, fileName) => {
+    try {
+      const response = await api.get(`/api/subject-files/download/${fileId}`, {
+        responseType: 'blob'
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName || 'download');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Download started');
+    } catch (error) {
+      toast.error('Download failed');
     }
   };
 
@@ -328,7 +363,7 @@ const SubjectMaterials = ({ sidebarOpen }) => {
                 <FiTrash2 size={16} /> Delete
               </button>
               <button
-                onClick={() => api.get(`/api/subject-files/download/${file._id}`)}
+                onClick={() => handleDownload(file._id, file.title)}
                 className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition flex items-center gap-2"
               >
                 <FiDownload size={16} /> Download
@@ -345,6 +380,7 @@ const SubjectMaterials = ({ sidebarOpen }) => {
           onClose={() => toggleModal('upload', false)}
           formData={uploadForm}
           setFormData={setUploadForm}
+          onSubjectChange={handleSubjectChange}
           onSubmit={handleUpload}
           subjects={state.subjects}
         />
@@ -363,7 +399,7 @@ const SubjectMaterials = ({ sidebarOpen }) => {
 };
 
 // Upload Modal Component
-const UploadModal = ({ isOpen, onClose, formData, setFormData, onSubmit, subjects }) => {
+const UploadModal = ({ isOpen, onClose, formData, setFormData, onSubjectChange, onSubmit, subjects }) => {
   if (!isOpen) return null;
 
   return (
@@ -382,7 +418,7 @@ const UploadModal = ({ isOpen, onClose, formData, setFormData, onSubmit, subject
               <label className="block text-sm font-medium mb-1">Subject *</label>
               <select
                 value={formData.subjectId}
-                onChange={(e) => setFormData(p => ({ ...p, subjectId: e.target.value }))}
+                onChange={onSubjectChange}
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
                 required
               >
@@ -390,6 +426,22 @@ const UploadModal = ({ isOpen, onClose, formData, setFormData, onSubmit, subject
                 {subjects.map(s => (
                   <option key={s._id} value={s._id}>{s.code} - {s.name}</option>
                 ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Academic Year *</label>
+              <select
+                value={formData.academicYear}
+                onChange={(e) => setFormData(p => ({ ...p, academicYear: e.target.value }))}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                required
+              >
+                <option value="">Select Year</option>
+                <option value="1st Year">1st Year</option>
+                <option value="2nd Year">2nd Year</option>
+                <option value="3rd Year">3rd Year</option>
+                <option value="4th Year">4th Year</option>
               </select>
             </div>
 

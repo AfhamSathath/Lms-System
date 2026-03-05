@@ -9,7 +9,7 @@ const {
   updateFile,
   deleteFile,
   getStats
-} =filecontroller= require('../controllers/fileController');
+} = require('../controllers/fileController');
 
 const { protect } = require('../middleware/auth');
 const { upload } = require('../middleware/upload');

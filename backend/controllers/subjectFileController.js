@@ -6,6 +6,35 @@ const fs = require('fs');
 const path = require('path');
 
 /* =====================================================
+   Get All Subject Files
+===================================================== */
+exports.getAllFiles = async (req, res, next) => {
+  try {
+    const { semester, academicYear, fileType, limit = 100 } = req.query;
+
+    let query = { isActive: true, isPublished: true };
+
+    if (semester && semester !== 'all') query.semester = Number(semester);
+    if (academicYear && academicYear !== 'all') query.academicYear = academicYear;
+    if (fileType && fileType !== 'all') query.fileType = fileType;
+
+    const files = await SubjectFile.find(query)
+      .populate('subject', 'name code')
+      .populate('uploadedBy', 'name email')
+      .sort('-createdAt')
+      .limit(Number(limit));
+
+    res.json({
+      success: true,
+      count: files.length,
+      files
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/* =====================================================
    Upload Subject File
 ===================================================== */
 exports.uploadSubjectFile = async (req, res, next) => {
@@ -41,25 +70,12 @@ exports.uploadSubjectFile = async (req, res, next) => {
       });
     }
 
-    // Validate department
-    let department = await Department.findById(departmentId);
-    
-    // If not found by ID, try to find by name
-    if (!department) {
-      department = await Department.findOne({ name: departmentId });
-    }
-    
-    if (!department) {
-      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-      return res.status(404).json({
-        success: false,
-        message: 'Department not found'
-      });
-    }
+    // Use department from subject or request
+    const departmentName = departmentId || subject.department;
 
     const subjectFile = await SubjectFile.create({
       subject: subjectId,
-      department: department._id,
+      department: departmentName,
       uploadedBy: req.user.id,
       title,
       description,
@@ -80,7 +96,6 @@ exports.uploadSubjectFile = async (req, res, next) => {
 
     await subjectFile.populate([
       { path: 'subject', select: 'name code' },
-      { path: 'department', select: 'name code' },
       { path: 'uploadedBy', select: 'name email' }
     ]);
 
@@ -351,9 +366,10 @@ exports.getFileStatistics = async (req, res, next) => {
     const { departmentId, semester, academicYear } = req.query;
 
     let matchStage = {};
-    if (departmentId) matchStage.department = require('mongoose').Types.ObjectId(departmentId);
-    if (semester) matchStage.semester = Number(semester);
-    if (academicYear) matchStage.academicYear = academicYear;
+
+    if (departmentId && departmentId !== 'all') {
+      matchStage.department = departmentId;
+    }
 
     const stats = await SubjectFile.aggregate([
       { $match: { ...matchStage, isActive: true } },

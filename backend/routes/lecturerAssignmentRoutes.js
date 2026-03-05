@@ -17,7 +17,10 @@ const { protect, authorize } = require('../middleware/auth');
 ===================================================== */
 
 // Admin: Assign lecturer to subject
-router.post('/assign', protect, authorize('admin', 'hod'), assignLecturerToSubject);
+router.post('/assign', protect, authorize('admin', 'hod'), (req, res, next) => {
+  console.log('Post to /assign reached');
+  next();
+}, assignLecturerToSubject);
 
 // Get all assignments (admin only)
 router.get('/all', protect, authorize('admin'), getAllAssignments);

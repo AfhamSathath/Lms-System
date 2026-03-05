@@ -1,5 +1,6 @@
 const Subject = require('../models/course');
 const User = require('../models/user');
+const LecturerAssignment = require('../models/LecturerAssignment');
 const { getDepartmentSubjects, getAllSubjectsForSeeding } = require('../utils/subjectData');
 const fs = require('fs');
 const csv = require('csv-parser');
@@ -25,8 +26,23 @@ exports.getSubjects = async (req, res, next) => {
       query.year = yearMap[req.user.currentYear] || '1st Year';
       query.semester = req.user.currentSemester || 1;
       query.department = req.user.department;
-    } else if (req.user.role === 'lecturer') {
-      query.lecturer = req.user.id;
+    } else if (req.user.role === 'lecturer' || req.user.role === 'hod') {
+      // Find subjects directly assigned to the lecturer in the Subject model
+      // OR subjects assigned via the LecturerAssignment model
+      const assignments = await LecturerAssignment.find({
+        lecturer: req.user.id,
+        isActive: true
+      });
+
+      const assignedSubjectIds = assignments.map(a => a.subject);
+
+      query = {
+        $or: [
+          { lecturer: req.user.id },
+          { _id: { $in: assignedSubjectIds } }
+        ],
+        isActive: true
+      };
     }
 
     const subjects = await Subject.find(query)
@@ -509,8 +525,20 @@ exports.getSubjectsByLecturer = async (req, res, next) => {
   try {
     const { lecturerId } = req.params;
 
-    const subjects = await Subject.find({
+    // Find subjects directly assigned to the lecturer in the Subject model
+    // OR subjects assigned via the LecturerAssignment model
+    const assignments = await LecturerAssignment.find({
       lecturer: lecturerId,
+      isActive: true
+    });
+
+    const assignedSubjectIds = assignments.map(a => a.subject);
+
+    const subjects = await Subject.find({
+      $or: [
+        { lecturer: lecturerId },
+        { _id: { $in: assignedSubjectIds } }
+      ],
       isActive: true
     }).sort({ year: 1, semester: 1, code: 1 });
 

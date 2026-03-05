@@ -6,7 +6,7 @@ const lecturerAssignmentSchema = new mongoose.Schema({
     ref: 'User',
     required: [true, 'Lecturer is required'],
     validate: {
-      validator: async function(v) {
+      validator: async function (v) {
         const user = await mongoose.model('User').findById(v);
         return user && (user.role === 'lecturer' || user.role === 'hod');
       },
@@ -15,8 +15,7 @@ const lecturerAssignmentSchema = new mongoose.Schema({
   },
 
   department: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Department',
+    type: String,
     required: [true, 'Department is required']
   },
 
@@ -134,7 +133,7 @@ const lecturerAssignmentSchema = new mongoose.Schema({
     type: Date,
     required: [true, 'End date is required'],
     validate: {
-      validator: function(value) {
+      validator: function (value) {
         return value > this.startDate;
       },
       message: 'End date must be after start date'
@@ -157,7 +156,7 @@ const lecturerAssignmentSchema = new mongoose.Schema({
 });
 
 // Virtual for assignment status
-lecturerAssignmentSchema.virtual('isCurrentAssignment').get(function() {
+lecturerAssignmentSchema.virtual('isCurrentAssignment').get(function () {
   const now = new Date();
   return this.startDate <= now && this.endDate >= now;
 });

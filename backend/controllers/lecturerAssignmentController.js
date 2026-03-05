@@ -31,26 +31,14 @@ exports.assignLecturerToSubject = async (req, res) => {
       return res.status(404).json({ error: 'Subject not found' });
     }
 
-    // Check Department: first try as ObjectId
-    let department;
-    if (mongoose.Types.ObjectId.isValid(departmentId)) {
-      department = await Department.findById(departmentId);
-    }
-
-    // If not found as ObjectId, try as code
-    if (!department) {
-      department = await Department.findOne({ code: departmentId });
-    }
-
-    if (!department) {
-      return res.status(404).json({ error: 'Department not found' });
-    }
+    // Use department string directly
+    const departmentName = departmentId;
 
     // Check if this assignment already exists
     const existing = await LecturerAssignment.findOne({
       lecturer: lecturer._id,
       subject: subject._id,
-      department: department._id
+      department: departmentName
     });
 
     if (existing) {
@@ -61,7 +49,14 @@ exports.assignLecturerToSubject = async (req, res) => {
     const newAssignment = new LecturerAssignment({
       lecturer: lecturer._id,
       subject: subject._id,
-      department: department._id
+      department: departmentName,
+      academicYear: subject.year, // Auto-fill from subject
+      semester: subject.semester, // Auto-fill from subject
+      startDate: req.body.startDate,
+      endDate: req.body.endDate,
+      curriculum: req.body.curriculum,
+      qualifications: req.body.qualifications,
+      notes: req.body.notes
     });
 
     await newAssignment.save();
@@ -93,7 +88,6 @@ exports.getLecturerSubjects = async (req, res, next) => {
     // Get assignments
     const assignments = await LecturerAssignment.find(filter)
       .populate('subject', 'name code credits semester')
-      .populate('department', 'name')
       .sort({ createdAt: -1 });
 
     res.status(200).json({

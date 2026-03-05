@@ -3,8 +3,8 @@ import { useAuth } from '../../context/Authcontext';
 import api from '../../services/api';
 import Loader from '../../components/common/loader';
 
-import { 
-  FiPlus, FiEdit2, FiTrash2, FiUser, FiBook, FiCheckCircle, 
+import {
+  FiPlus, FiEdit2, FiTrash2, FiUser, FiBook, FiCheckCircle,
   FiAlertCircle, FiDownload, FiSearch, FiFilter, FiTrendingUp,
   FiAward, FiBarChart2, FiX
 } from 'react-icons/fi';
@@ -82,7 +82,7 @@ const LecturerManagement = ({ sidebarOpen }) => {
   const filteredAssignments = useMemo(() => {
     return state.assignments.filter(a => {
       const searchTerm = filters.search.toLowerCase();
-      const matchesSearch = 
+      const matchesSearch =
         a.lecturer?.name?.toLowerCase().includes(searchTerm) ||
         a.subject?.code?.toLowerCase().includes(searchTerm) ||
         a.subject?.name?.toLowerCase().includes(searchTerm);
@@ -127,7 +127,7 @@ const LecturerManagement = ({ sidebarOpen }) => {
 
       const selectedLecturer = state.lecturers.find(l => l._id === formData.lecturerId);
       const selectedSubject = state.subjects.find(s => s._id === formData.subjectId);
-      
+
       if (selectedLecturer && selectedSubject) {
         await api.post('/api/notifications/send', {
           recipientIds: [formData.lecturerId],
@@ -372,17 +372,20 @@ const LecturerManagement = ({ sidebarOpen }) => {
   );
 }
 
-     
+
 // Assign Modal Component
 const AssignModal = ({ isOpen, onClose, formData, setFormData, onSubmit, lecturers, subjects, departments }) => {
   if (!isOpen) return null;
 
   // Allowed departments - filtered list
-  const ALLOWED_DEPARTMENTS = ['Computer Science', 'Software Engineering', 'Information Technology'];
-  
+  const ALLOWED_DEPARTMENTS = ['Computer Science', 'Software Engineering', 'Information Technology', 'CS', 'SE', 'IT'];
+
   // Filter departments to only show allowed ones
-  const allowedDepts = departments.filter(d => 
-    ALLOWED_DEPARTMENTS.includes(d.name)
+  const allowedDepts = departments.filter(d =>
+    ALLOWED_DEPARTMENTS.some(allowed =>
+      d.name?.trim().toLowerCase() === allowed.toLowerCase() ||
+      d.code?.trim().toLowerCase() === allowed.toLowerCase()
+    )
   );
 
   return (
@@ -417,7 +420,6 @@ const AssignModal = ({ isOpen, onClose, formData, setFormData, onSubmit, lecture
               <select
                 value={formData.subjectId}
                 onChange={(e) => {
-                  // when a subject is chosen we try to resolve its department to an _id
                   const subjId = e.target.value;
                   const selectedSubject = subjects.find(s => s._id === subjId);
 
@@ -425,12 +427,9 @@ const AssignModal = ({ isOpen, onClose, formData, setFormData, onSubmit, lecture
                   let autoResolved = false;
 
                   if (selectedSubject && selectedSubject.department) {
-                    const deptIdentifier = selectedSubject.department; // could be name, code or (unexpected) id
+                    const deptIdentifier = selectedSubject.department.toString().trim();
 
-                    // look up the department by id first, then by code/name (case‑insensitive)
-                    // but only from the allowed departments list
                     const matchedDept = allowedDepts.find(d =>
-                      // match by id (string compare), code or name
                       d._id?.toString() === deptIdentifier ||
                       d.code?.toLowerCase() === deptIdentifier.toLowerCase() ||
                       d.name?.toLowerCase() === deptIdentifier.toLowerCase()
@@ -439,16 +438,15 @@ const AssignModal = ({ isOpen, onClose, formData, setFormData, onSubmit, lecture
                     if (matchedDept) {
                       selectedDepartmentId = matchedDept._id;
                       autoResolved = true;
-                    } else {
-                      // couldn't resolve automatically, user will have to pick from allowed ones
-                      toast.error('Subject department is not in allowed list. Please select from: Computer Science, Software Engineering, Information Technology');
+                    } else if (deptIdentifier) {
+                      // Only show error if there actually is a department string that didn't match
+                      toast.error(`Subject department "${deptIdentifier}" is not in allowed list. Please select manually.`);
                     }
                   }
 
                   setFormData(p => ({
                     ...p,
                     subjectId: subjId,
-                    // clear departmentId when resolution fails so user must choose manually
                     departmentId: autoResolved ? selectedDepartmentId : '',
                     academicYear: selectedSubject?.year || '',
                     semester: selectedSubject?.semester ? selectedSubject.semester.toString() : ''

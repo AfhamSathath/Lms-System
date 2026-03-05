@@ -25,22 +25,22 @@ exports.registerUser = async (req, res, next) => {
     // Check validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        errors: errors.array() 
+        errors: errors.array()
       });
     }
 
-    const { 
-      email, 
-      password, 
-      name, 
-      role, 
-      studentId, 
+    const {
+      email,
+      password,
+      name,
+      role,
+      studentId,
       lecturerId,
       gender,
-      dateOfBirth, 
-      department, 
+      dateOfBirth,
+      department,
       semester,
       yearOfStudy,
       phone,
@@ -53,9 +53,9 @@ exports.registerUser = async (req, res, next) => {
     // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'User already exists with this email' 
+        message: 'User already exists with this email'
       });
     }
 
@@ -63,9 +63,9 @@ exports.registerUser = async (req, res, next) => {
     if (role === 'student' && studentId) {
       const existingStudent = await User.findOne({ studentId });
       if (existingStudent) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          message: 'Student ID already exists' 
+          message: 'Student ID already exists'
         });
       }
     }
@@ -73,9 +73,9 @@ exports.registerUser = async (req, res, next) => {
     if (['lecturer', 'hod', 'dean'].includes(role) && lecturerId) {
       const existingLecturer = await User.findOne({ lecturerId });
       if (existingLecturer) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          message: 'Lecturer ID already exists' 
+          message: 'Lecturer ID already exists'
         });
       }
     }
@@ -133,6 +133,7 @@ exports.registerUser = async (req, res, next) => {
         qualifications: user.qualifications,
         specialization: user.specialization,
         isActive: user.isActive,
+        profilePicture: user.profilePicture,
         createdAt: user.createdAt
       }
     });
@@ -151,9 +152,9 @@ exports.loginUser = async (req, res, next) => {
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        errors: errors.array() 
+        errors: errors.array()
       });
     }
 
@@ -162,26 +163,26 @@ exports.loginUser = async (req, res, next) => {
     // Check for user
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
-        message: 'Invalid credentials' 
+        message: 'Invalid credentials'
       });
     }
 
     // Check if user is active
     if (!user.isActive) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
-        message: 'Your account has been deactivated. Please contact administrator.' 
+        message: 'Your account has been deactivated. Please contact administrator.'
       });
     }
 
     // Check password
     const isPasswordMatch = await user.comparePassword(password);
     if (!isPasswordMatch) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
-        message: 'Invalid credentials' 
+        message: 'Invalid credentials'
       });
     }
 
@@ -206,6 +207,7 @@ exports.loginUser = async (req, res, next) => {
         semester: user.semester,
         yearOfStudy: user.yearOfStudy,
         isActive: user.isActive,
+        profilePicture: user.profilePicture,
         lastLogin: user.lastLogin
       }
     });
@@ -221,11 +223,11 @@ exports.loginUser = async (req, res, next) => {
 exports.getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
-    
+
     if (!user) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'User not found' 
+        message: 'User not found'
       });
     }
 
@@ -249,6 +251,7 @@ exports.getMe = async (req, res, next) => {
         dateOfBirth: user.dateOfBirth,
         emergencyContact: user.emergencyContact,
         isActive: user.isActive,
+        profilePicture: user.profilePicture,
         lastLogin: user.lastLogin,
         createdAt: user.createdAt
       }
@@ -265,7 +268,7 @@ exports.getMe = async (req, res, next) => {
 exports.getAllUsers = async (req, res, next) => {
   try {
     const users = await User.find({}).select('-password').sort({ createdAt: -1 });
-    
+
     res.json({
       success: true,
       count: users.length,
@@ -283,11 +286,11 @@ exports.getAllUsers = async (req, res, next) => {
 exports.getUserById = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
-    
+
     if (!user) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'User not found' 
+        message: 'User not found'
       });
     }
 
@@ -315,11 +318,11 @@ exports.updateUser = async (req, res, next) => {
       updateData,
       { new: true, runValidators: true }
     ).select('-password');
-    
+
     if (!user) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'User not found' 
+        message: 'User not found'
       });
     }
 
@@ -340,11 +343,11 @@ exports.updateUser = async (req, res, next) => {
 exports.toggleUserStatus = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id);
-    
+
     if (!user) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'User not found' 
+        message: 'User not found'
       });
     }
 
@@ -368,11 +371,11 @@ exports.toggleUserStatus = async (req, res, next) => {
 exports.deleteUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id);
-    
+
     if (!user) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'User not found' 
+        message: 'User not found'
       });
     }
 
@@ -402,13 +405,13 @@ exports.deleteUser = async (req, res, next) => {
 exports.forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
-    
+
     const user = await User.findOne({ email });
-    
+
     if (!user) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'No user found with this email' 
+        message: 'No user found with this email'
       });
     }
 
@@ -419,7 +422,7 @@ exports.forgotPassword = async (req, res, next) => {
       .update(resetToken)
       .digest('hex');
     user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
-    
+
     await user.save({ validateBeforeSave: false });
 
     // In production, send email with reset token
@@ -451,9 +454,9 @@ exports.resetPassword = async (req, res, next) => {
     });
 
     if (!user) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Invalid or expired token' 
+        message: 'Invalid or expired token'
       });
     }
 
@@ -461,7 +464,7 @@ exports.resetPassword = async (req, res, next) => {
     user.password = req.body.password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
-    
+
     await user.save();
 
     // Generate new token
