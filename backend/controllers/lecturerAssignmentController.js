@@ -6,112 +6,70 @@ const Department = require('../models/Department');
 /* =====================================================
    Assign Lecturer to Subject
 ===================================================== */
-exports.assignLecturerToSubject = async (req, res, next) => {
+// controllers/lecturerAssignmentController.js
+const mongoose = require('mongoose');
+
+
+exports.assignLecturerToSubject = async (req, res) => {
   try {
-    const {
-      lecturerId,
-      subjectId,
-      departmentId,
-      semester,
-      academicYear,
-      startDate,
-      endDate,
-      qualificationsRequired,
-      curriculumRequirements
-    } = req.body;
+    const { lecturerId, departmentId, subjectId } = req.body;
 
     // Validate required fields
-    if (!lecturerId || !subjectId || !departmentId || !semester || !academicYear) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide all required fields: lecturerId, subjectId, departmentId, semester, academicYear'
-      });
+    if (!lecturerId || !departmentId || !subjectId) {
+      return res.status(400).json({ error: 'All fields are required' });
     }
 
-    // Check if lecturer exists
+    // Check if Lecturer exists
     const lecturer = await User.findById(lecturerId);
-    if (!lecturer || lecturer.role !== 'lecturer') {
-      return res.status(404).json({
-        success: false,
-        message: 'Lecturer not found or invalid role'
-      });
+    if (!lecturer) {
+      return res.status(404).json({ error: 'Lecturer not found' });
     }
 
-    // Check if subject exists
+    // Check if Subject exists
     const subject = await Subject.findById(subjectId);
     if (!subject) {
-      return res.status(404).json({
-        success: false,
-        message: 'Subject not found'
-      });
+      return res.status(404).json({ error: 'Subject not found' });
     }
 
-    // Check if department exists
-    const department = await Department.findById(departmentId);
+    // Check Department: first try as ObjectId
+    let department;
+    if (mongoose.Types.ObjectId.isValid(departmentId)) {
+      department = await Department.findById(departmentId);
+    }
+
+    // If not found as ObjectId, try as code
     if (!department) {
-      return res.status(404).json({
-        success: false,
-        message: 'Department not found'
-      });
+      department = await Department.findOne({ code: departmentId });
     }
 
-    // Check for duplicate assignment
-    const existingAssignment = await LecturerAssignment.findOne({
-      lecturer: lecturerId,
-      subject: subjectId,
-      semester,
-      academicYear
+    if (!department) {
+      return res.status(404).json({ error: 'Department not found' });
+    }
+
+    // Check if this assignment already exists
+    const existing = await LecturerAssignment.findOne({
+      lecturer: lecturer._id,
+      subject: subject._id,
+      department: department._id
     });
 
-    if (existingAssignment) {
-      return res.status(400).json({
-        success: false,
-        message: 'This lecturer is already assigned to this subject for this semester'
-      });
+    if (existing) {
+      return res.status(400).json({ error: 'Lecturer is already assigned to this subject in this department' });
     }
 
     // Create new assignment
-    const assignment = new LecturerAssignment({
-      lecturer: lecturerId,
-      subject: subjectId,
-      department: departmentId,
-      semester,
-      academicYear,
-      startDate: startDate || new Date(),
-      endDate: endDate || new Date(Date.now() + 120 * 24 * 60 * 60 * 1000), // 120 days default
-      qualificationsRequired: qualificationsRequired || [],
-      curriculum: curriculumRequirements || {
-        totalLectures: 30,
-        totalPracticals: 10,
-        totalAssignments: 5,
-        lecturesCompleted: 0,
-        practicalsCompleted: 0,
-        assignmentsCompleted: 0,
-        progressPercentage: 0
-      },
-      status: 'assigned'
+    const newAssignment = new LecturerAssignment({
+      lecturer: lecturer._id,
+      subject: subject._id,
+      department: department._id
     });
 
-    // Save assignment
-    await assignment.save();
+    await newAssignment.save();
 
-    // Populate references for response
-    await assignment.populate('lecturer', 'name email lecturerId');
-    await assignment.populate('subject', 'name code');
-    await assignment.populate('department', 'name');
-
-    res.status(201).json({
-      success: true,
-      message: 'Lecturer assigned to subject successfully',
-      data: assignment
-    });
-  } catch (error) {
-    console.error('Error assigning lecturer:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error assigning lecturer',
-      error: error.message
-    });
+    res.status(201).json({ message: 'Lecturer assigned successfully', assignment: newAssignment });
+  } catch (err) {
+    console.error('Error assigning lecturer:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -225,13 +183,13 @@ exports.updateAssignmentProgress = async (req, res, next) => {
     if (assignmentsCompleted !== undefined) assignment.curriculum.assignmentsCompleted = assignmentsCompleted;
 
     // Calculate progress percentage
-    const totalItems = assignment.curriculum.totalLectures + 
-                      assignment.curriculum.totalPracticals + 
-                      assignment.curriculum.totalAssignments;
-    const completedItems = assignment.curriculum.lecturesCompleted + 
-                          assignment.curriculum.practicalsCompleted + 
-                          assignment.curriculum.assignmentsCompleted;
-    
+    const totalItems = assignment.curriculum.totalLectures +
+      assignment.curriculum.totalPracticals +
+      assignment.curriculum.totalAssignments;
+    const completedItems = assignment.curriculum.lecturesCompleted +
+      assignment.curriculum.practicalsCompleted +
+      assignment.curriculum.assignmentsCompleted;
+
     assignment.curriculum.progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
     // Auto-mark as completed at 100%

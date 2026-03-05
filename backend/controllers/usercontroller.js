@@ -22,8 +22,8 @@ exports.registerUser = async (req, res, next) => {
 
     const userData = { name, email, password, role, gender, dateOfBirth, department, semester, yearOfStudy, phone, address, emergencyContact, emergencyContactPhone, qualifications, specialization, isActive: true };
 
-    if (role === 'student') userData.studentId = studentId;
-    if (['lecturer', 'hod', 'dean'].includes(role)) userData.lecturerId = lecturerId;
+    if (role === 'student' && studentId && studentId.trim() !== '') userData.studentId = studentId;
+    if (['lecturer', 'hod', 'dean'].includes(role) && lecturerId && lecturerId.trim() !== '') userData.lecturerId = lecturerId;
 
     const user = await User.create(userData);
     user.password = undefined;
@@ -134,7 +134,11 @@ exports.createUser = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-    const user = await User.create(req.body);
+    const userData = { ...req.body };
+    if (!userData.studentId || userData.studentId.trim() === '') delete userData.studentId;
+    if (!userData.lecturerId || userData.lecturerId.trim() === '') delete userData.lecturerId;
+
+    const user = await User.create(userData);
     user.password = undefined;
     res.status(201).json({ success: true, user });
   } catch (error) { next(error); }
@@ -142,7 +146,21 @@ exports.createUser = async (req, res, next) => {
 
 exports.updateUser = async (req, res, next) => {
   try {
-    const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true }).select('-password');
+    const updateData = { ...req.body };
+    const unsetData = {};
+    if (updateData.studentId === '' || updateData.studentId === null) {
+      delete updateData.studentId;
+      unsetData.studentId = 1;
+    }
+    if (updateData.lecturerId === '' || updateData.lecturerId === null) {
+      delete updateData.lecturerId;
+      unsetData.lecturerId = 1;
+    }
+    if (Object.keys(unsetData).length > 0) {
+      updateData.$unset = unsetData;
+    }
+
+    const user = await User.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true }).select('-password');
     res.json({ success: true, user });
   } catch (error) { next(error); }
 };

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/Authcontext';
 import api from '../../services/api';
 import Loader from '../../components/common/loader';
+
 import { 
   FiPlus, FiEdit2, FiTrash2, FiUser, FiBook, FiCheckCircle, 
   FiAlertCircle, FiDownload, FiSearch, FiFilter, FiTrendingUp,
@@ -99,7 +100,7 @@ const LecturerManagement = ({ sidebarOpen }) => {
   const handleAssign = async (e) => {
     e.preventDefault();
 
-    if (!formData.lecturerId || !formData.subjectId || !formData.departmentId) {
+    if (!formData.lecturerId || !formData.subjectId || !formData.departmentId || !formData.academicYear || !formData.semester || !formData.startDate || !formData.endDate || !formData.minimumQualification) {
       toast.error('Please fill all required fields');
       return;
     }
@@ -124,7 +125,6 @@ const LecturerManagement = ({ sidebarOpen }) => {
         notes: formData.notes
       });
 
-      // Send notification to lecturer
       const selectedLecturer = state.lecturers.find(l => l._id === formData.lecturerId);
       const selectedSubject = state.subjects.find(s => s._id === formData.subjectId);
       
@@ -370,8 +370,9 @@ const LecturerManagement = ({ sidebarOpen }) => {
       )}
     </div>
   );
-};
+}
 
+     
 // Assign Modal Component
 const AssignModal = ({ isOpen, onClose, formData, setFormData, onSubmit, lecturers, subjects, departments }) => {
   if (!isOpen) return null;
