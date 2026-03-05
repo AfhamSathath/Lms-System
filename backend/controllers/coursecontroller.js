@@ -1,6 +1,8 @@
 const Subject = require('../models/course');
 const User = require('../models/user');
 const { getDepartmentSubjects, getAllSubjectsForSeeding } = require('../utils/subjectData');
+const fs = require('fs');
+const csv = require('csv-parser');
 
 const academicYears = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
 
@@ -81,28 +83,28 @@ exports.createSubject = async (req, res, next) => {
     // Validate year
     const validYears = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
     if (!validYears.includes(year)) {
-      return res.status(400).json({ 
-        message: 'Invalid year. Must be: 1st Year, 2nd Year, 3rd Year, or 4th Year' 
+      return res.status(400).json({
+        message: 'Invalid year. Must be: 1st Year, 2nd Year, 3rd Year, or 4th Year'
       });
     }
 
     // Validate semester
     if (![1, 2].includes(parseInt(semester))) {
-      return res.status(400).json({ 
-        message: 'Invalid semester. Must be 1 or 2' 
+      return res.status(400).json({
+        message: 'Invalid semester. Must be 1 or 2'
       });
     }
 
     // Validate department
     const validDepartments = ['Computer Science', 'Software Engineering', 'Information Technology'];
     if (!validDepartments.includes(department)) {
-      return res.status(400).json({ 
-        message: 'Invalid department' 
+      return res.status(400).json({
+        message: 'Invalid department'
       });
     }
 
     const subject = await Subject.create(req.body);
-    
+
     await subject.populate('lecturer', 'name email lecturerId');
 
     res.status(201).json({
@@ -114,8 +116,8 @@ exports.createSubject = async (req, res, next) => {
     });
   } catch (error) {
     if (error.code === 11000) {
-      return res.status(400).json({ 
-        message: 'Subject code already exists for this year, semester and department' 
+      return res.status(400).json({
+        message: 'Subject code already exists for this year, semester and department'
       });
     }
     next(error);
@@ -146,8 +148,8 @@ exports.updateSubject = async (req, res, next) => {
     });
   } catch (error) {
     if (error.code === 11000) {
-      return res.status(400).json({ 
-        message: 'Subject code already exists for this year, semester and department' 
+      return res.status(400).json({
+        message: 'Subject code already exists for this year, semester and department'
       });
     }
     next(error);
@@ -184,7 +186,7 @@ exports.deleteSubject = async (req, res, next) => {
 exports.getSubjectsByYearAndSemester = async (req, res, next) => {
   try {
     const { year, semester } = req.params;
-    
+
     const query = {
       year,
       semester: parseInt(semester),
@@ -253,9 +255,9 @@ exports.getSubjectsByDepartment = async (req, res, next) => {
     const { department } = req.params;
     const { year, semester } = req.query;
 
-    let query = { 
+    let query = {
       department,
-      isActive: true 
+      isActive: true
     };
 
     if (year) query.year = year;
@@ -267,7 +269,7 @@ exports.getSubjectsByDepartment = async (req, res, next) => {
 
     // Group by year and semester for easier frontend consumption
     const groupedSubjects = {};
-    
+
     academicYears.forEach(y => {
       groupedSubjects[y] = {
         semester1: [],
@@ -305,7 +307,7 @@ exports.getSubjectsByDepartment = async (req, res, next) => {
 exports.getSubjectsByCategory = async (req, res, next) => {
   try {
     const { category } = req.params;
-    
+
     const query = {
       category,
       isActive: true,
@@ -391,10 +393,10 @@ exports.getSubjectStatsByYear = async (req, res, next) => {
       };
 
       for (const dept of departments) {
-        const subjects = await Subject.find({ 
-          year, 
+        const subjects = await Subject.find({
+          year,
           department: dept,
-          isActive: true 
+          isActive: true
         });
 
         const deptStats = {
@@ -437,19 +439,19 @@ exports.getSubjectStatsByYear = async (req, res, next) => {
 exports.seedSubjects = async (req, res, next) => {
   try {
     const { department } = req.body;
-    
+
     // Get subjects based on department or all departments
     let subjectsToSeed = [];
-    
+
     if (department && department !== 'all') {
       // Seed specific department
       const deptSubjects = getDepartmentSubjects(department);
-      
+
       Object.keys(deptSubjects).forEach(year => {
         ['semester1', 'semester2'].forEach(semKey => {
           const semester = semKey === 'semester1' ? 1 : 2;
           const subjects = deptSubjects[year][semKey] || [];
-          
+
           subjects.forEach(sub => {
             subjectsToSeed.push({
               ...sub,
@@ -567,5 +569,83 @@ exports.bulkCreateSubjects = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+};
+
+// @desc    Bulk upload subjects from CSV
+// @route   POST /api/subjects/bulk-upload
+// @access  Private/Admin
+exports.bulkUploadSubjects = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Please upload a CSV file' });
+    }
+
+    const results = [];
+    fs.createReadStream(req.file.path)
+      .pipe(csv())
+      .on('data', (data) => results.push(data))
+      .on('end', async () => {
+        try {
+          let importedCount = 0;
+          let failedCount = 0;
+          const errors = [];
+
+          for (const row of results) {
+            try {
+              // Basic validation
+              if (!row.name || !row.code || !row.credits || !row.year || !row.semester || !row.department) {
+                failedCount++;
+                errors.push(`Row missing required fields: ${JSON.stringify(row)}`);
+                continue;
+              }
+
+              // Check if subject already exists
+              const existingSubject = await Subject.findOne({
+                code: row.code,
+                year: row.year,
+                semester: row.semester,
+                department: row.department
+              });
+
+              if (existingSubject) {
+                failedCount++;
+                errors.push(`Subject code already exists for this config: ${row.code}`);
+                continue;
+              }
+
+              const subjectData = {
+                ...row,
+                credits: parseInt(row.credits, 10),
+                semester: parseInt(row.semester, 10),
+                hasPractical: row.hasPractical === 'true' || row.hasPractical === true
+              };
+
+              const subject = await Subject.create(subjectData);
+              importedCount++;
+            } catch (err) {
+              failedCount++;
+              errors.push(`Error inserting row ${row.code || 'unknown'}: ${err.message}`);
+            }
+          }
+
+          // Delete the temporary file
+          fs.unlinkSync(req.file.path);
+
+          res.json({
+            success: true,
+            message: `Import complete. Inserted: ${importedCount}, Failed: ${failedCount}`,
+            count: importedCount,
+            failed: failedCount,
+            errors
+          });
+        } catch (error) {
+          fs.unlinkSync(req.file.path);
+          next(error);
+        }
+      });
+  } catch (err) {
+    if (req.file) fs.unlinkSync(req.file.path);
+    next(err);
   }
 };

@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/auth');
 const courseController = require('../controllers/coursecontroller');
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
 const {
   getSubjects,
   getSubject,
@@ -17,6 +19,7 @@ const {
   seedSubjects,
   getSubjectsByLecturer,
   bulkCreateSubjects,
+  bulkUploadSubjects
 } = courseController;
 
 // All routes require authentication
@@ -38,8 +41,9 @@ router.put('/:id/assign-lecturer', authorize('admin'), assignLecturer);
 // Admin only routes
 router.post('/', authorize('admin'), createSubject);
 router.post('/bulk', authorize('admin'), bulkCreateSubjects);
+router.post('/bulk-upload', authorize('admin'), upload.single('file'), bulkUploadSubjects);
 router.post('/seed', authorize('admin'), seedSubjects);
-router.put('/:id', authorize('admin'),  updateSubject);
+router.put('/:id', authorize('admin'), updateSubject);
 router.delete('/:id', authorize('admin'), deleteSubject);
 
 module.exports = router;
