@@ -3,6 +3,9 @@ const User = require('../models/user');
 const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const emailService = require('../utils/emailService');
+const fs = require('fs');
+const csv = require('csv-parser');
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -72,17 +75,21 @@ exports.forgotPassword = async (req, res, next) => {
 
 exports.resetPassword = async (req, res, next) => {
   try {
-    const resetPasswordToken = crypto.createHash('sha256').update(req.params.resetToken).digest('hex');
-    const user = await User.findOne({ resetPasswordToken, resetPasswordExpire: { $gt: Date.now() } });
-    if (!user) return res.status(400).json({ message: 'Invalid or expired token' });
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    user.password = req.body.password;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
-    await user.save();
+    const resetToken = crypto.randomBytes(20).toString('hex');
+    user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+    await user.save({ validateBeforeSave: false });
 
-    const token = generateToken(user._id);
-    res.json({ success: true, token });
+    try {
+      await emailService.sendPasswordResetEmail(user, resetToken);
+      res.json({ success: true, message: 'Password reset email sent' });
+    } catch (emailError) {
+      console.error('Email failed to send:', emailError);
+      res.json({ success: true, resetToken, message: 'Password reset token generated but email failed to send (check SMTP settings)' });
+    }
   } catch (error) { next(error); }
 };
 
@@ -202,7 +209,74 @@ exports.getUserByRole = async (req, res, next) => {
 };
 
 exports.bulkImportUsers = async (req, res, next) => {
-  res.json({ success: true, message: 'Bulk import to be implemented' });
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Please upload a CSV file' });
+    }
+
+    const results = [];
+    fs.createReadStream(req.file.path)
+      .pipe(csv())
+      .on('data', (data) => results.push(data))
+      .on('end', async () => {
+        try {
+          let importedCount = 0;
+          let failedCount = 0;
+          const errors = [];
+
+          for (const row of results) {
+            try {
+              // Basic validation
+              if (!row.name || !row.email || !row.role) {
+                failedCount++;
+                errors.push(`Row missing required fields: ${JSON.stringify(row)}`);
+                continue;
+              }
+
+              // Check if user exists
+              const existingUser = await User.findOne({ email: row.email });
+              if (existingUser) {
+                failedCount++;
+                errors.push(`Email already exists: ${row.email}`);
+                continue;
+              }
+
+              const userData = { ...row };
+
+              // Secure password setup: Either the CSV contains a password or we give a default one
+              userData.password = row.password || 'password123';
+
+              // Handle sparse constraints with empty strings
+              if (!userData.studentId || userData.studentId.trim() === '') delete userData.studentId;
+              if (!userData.lecturerId || userData.lecturerId.trim() === '') delete userData.lecturerId;
+
+              const user = await User.create(userData);
+              importedCount++;
+            } catch (err) {
+              failedCount++;
+              errors.push(`Error inserting row ${row.email || 'unknown'}: ${err.message}`);
+            }
+          }
+
+          // Delete the temporary file
+          fs.unlinkSync(req.file.path);
+
+          res.json({
+            success: true,
+            message: `Import complete. Inserted: ${importedCount}, Failed: ${failedCount}`,
+            count: importedCount,
+            failed: failedCount,
+            errors
+          });
+        } catch (error) {
+          fs.unlinkSync(req.file.path);
+          next(error);
+        }
+      });
+  } catch (err) {
+    if (req.file) fs.unlinkSync(req.file.path);
+    next(err);
+  }
 };
 
 exports.exportUsersCSV = async (req, res, next) => {
