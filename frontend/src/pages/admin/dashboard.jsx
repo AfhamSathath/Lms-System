@@ -37,7 +37,7 @@ ChartJS.register(
   Filler
 );
 
-const AdminDashboard = ({ sidebarOpen }) => {
+const AdminDashboard = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -133,10 +133,7 @@ const AdminDashboard = ({ sidebarOpen }) => {
   }
 
   return (
-    <div
-      className="container mx-auto px-4 py-8 transition-all duration-300"
-      style={{ marginLeft: sidebarOpen ? 208 : 64 }}
-    >
+    <div className="container mx-auto px-4 py-8 transition-all duration-300">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 rounded-2xl shadow-xl p-8 mb-8 text-white">
         <h1 className="text-3xl font-bold">
@@ -147,35 +144,35 @@ const AdminDashboard = ({ sidebarOpen }) => {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard 
-          title="Total Users" 
-          value={stats.users.total} 
-          icon={<FiUsers className="h-6 w-6" />} 
-          trend={stats.users.newThisMonth} 
+        <StatCard
+          title="Total Users"
+          value={stats.users.total}
+          icon={<FiUsers className="h-6 w-6" />}
+          trend={stats.users.newThisMonth}
           trendLabel="new this month"
           color="blue"
         />
-        <StatCard 
-          title="Active Users" 
-          value={stats.users.active} 
-          icon={<FiUserCheck className="h-6 w-6" />} 
-          trend={Math.round((stats.users.active / (stats.users.total || 1)) * 100)} 
+        <StatCard
+          title="Active Users"
+          value={stats.users.active}
+          icon={<FiUserCheck className="h-6 w-6" />}
+          trend={Math.round((stats.users.active / (stats.users.total || 1)) * 100)}
           trendLabel="% active"
           color="green"
         />
-        <StatCard 
-          title="Total Courses" 
-          value={stats.courses.total} 
-          icon={<FiBook className="h-6 w-6" />} 
-          trend={stats.courses.active} 
+        <StatCard
+          title="Total Courses"
+          value={stats.courses.total}
+          icon={<FiBook className="h-6 w-6" />}
+          trend={stats.courses.active}
           trendLabel="active"
           color="purple"
         />
-        <StatCard 
-          title="Enrollments" 
-          value={stats.enrollments.total} 
-          icon={<FiTrendingUp className="h-6 w-6" />} 
-          trend={stats.enrollments.active} 
+        <StatCard
+          title="Enrollments"
+          value={stats.enrollments.total}
+          icon={<FiTrendingUp className="h-6 w-6" />}
+          trend={stats.enrollments.active}
           trendLabel="active"
           color="orange"
         />
@@ -190,8 +187,8 @@ const AdminDashboard = ({ sidebarOpen }) => {
           </h3>
           <div className="h-80">
             {stats.users.total > 0 ? (
-              <Doughnut 
-                data={userDistributionData} 
+              <Doughnut
+                data={userDistributionData}
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
@@ -214,40 +211,40 @@ const AdminDashboard = ({ sidebarOpen }) => {
         <div className="lg:col-span-2 bg-white rounded-xl shadow-lg p-6">
           <h3 className="text-lg font-semibold mb-4">Quick Overview</h3>
           <div className="grid grid-cols-2 gap-4">
-            <QuickStat 
-              label="Students" 
-              value={stats.users.students} 
-              icon={<FiUsers />} 
+            <QuickStat
+              label="Students"
+              value={stats.users.students}
+              icon={<FiUsers />}
               color="blue"
             />
-            <QuickStat 
-              label="Lecturers" 
-              value={stats.users.lecturers} 
-              icon={<FiUsers />} 
+            <QuickStat
+              label="Lecturers"
+              value={stats.users.lecturers}
+              icon={<FiUsers />}
               color="green"
             />
-            <QuickStat 
-              label="HODs" 
-              value={stats.users.hods} 
-              icon={<FiUsers />} 
+            <QuickStat
+              label="HODs"
+              value={stats.users.hods}
+              icon={<FiUsers />}
               color="yellow"
             />
-            <QuickStat 
-              label="Deans" 
-              value={stats.users.deans} 
-              icon={<FiUsers />} 
+            <QuickStat
+              label="Deans"
+              value={stats.users.deans}
+              icon={<FiUsers />}
               color="red"
             />
-            <QuickStat 
-              label="Admins" 
-              value={stats.users.admins} 
-              icon={<FiUsers />} 
+            <QuickStat
+              label="Admins"
+              value={stats.users.admins}
+              icon={<FiUsers />}
               color="purple"
             />
-            <QuickStat 
-              label="File Downloads" 
-              value={stats.files.totalDownloads} 
-              icon={<FiDownload />} 
+            <QuickStat
+              label="File Downloads"
+              value={stats.files.totalDownloads}
+              icon={<FiDownload />}
               color="indigo"
             />
           </div>

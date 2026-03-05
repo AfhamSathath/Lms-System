@@ -100,7 +100,7 @@ const getYearDisplay = (yearValue, academicYears) => {
 };
 
 // ==================== MAIN COMPONENT ====================
-const LecturerFiles = ({ sidebarOpen }) => {
+const LecturerFiles = () => {
   const { user } = useAuth();
 
   // State
@@ -536,8 +536,7 @@ const LecturerFiles = ({ sidebarOpen }) => {
 
   if (state.apiError) {
     return (
-      <div className="container mx-auto px-4 py-8 transition-all duration-300"
-        style={{ marginLeft: sidebarOpen ? 208 : 64 }}>
+      <div className="container mx-auto px-4 py-8 transition-all duration-300">
         <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg shadow-lg">
           <div className="flex items-center mb-4">
             <FiInfo className="h-8 w-8 text-red-500 mr-3" />
@@ -556,8 +555,7 @@ const LecturerFiles = ({ sidebarOpen }) => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 transition-all duration-300"
-      style={{ marginLeft: sidebarOpen ? 208 : 64 }}>
+    <div className="container mx-auto px-4 py-8 transition-all duration-300">
 
       {/* Header */}
       <Header

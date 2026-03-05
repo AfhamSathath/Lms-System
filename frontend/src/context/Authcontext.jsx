@@ -52,18 +52,18 @@ export const AuthProvider = ({ children }) => {
         email,
         password
       });
-      
+
       let { token, user } = response.data;
       // Ensure user has an id property for backward compatibility
       if (user._id && !user.id) {
         user.id = user._id;
       }
-      
+
       localStorage.setItem('token', token);
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setToken(token);
       setUser(user);
-      
+
       toast.success('Login successful!');
       return { success: true, role: user.role };
     } catch (error) {
@@ -73,22 +73,22 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (userData) => {
-  try {
-    const res = await api.post('/auth/register', userData);
+    try {
+      const res = await api.post('/auth/register', userData);
 
-    localStorage.setItem('token', res.data.token);
+      localStorage.setItem('token', res.data.token);
 
-    return {
-      success: true,
-      role: res.data.user.role
-    };
-  } catch (error) {
-    return {
-      success: false,
-      message: error.response?.data?.message
-    };
-  }
-};
+      return {
+        success: true,
+        role: res.data.user.role
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message
+      };
+    }
+  };
 
   const logout = () => {
     localStorage.removeItem('token');
@@ -103,6 +103,10 @@ export const AuthProvider = ({ children }) => {
     setUser(updatedUser);
   };
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+
   const value = {
     user,
     loading,
@@ -111,6 +115,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateUser,
     token,
+    sidebarOpen,
+    toggleSidebar,
     isAuthenticated: !!user,
   };
 

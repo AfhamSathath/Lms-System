@@ -5,7 +5,7 @@ import Modal from "../../components/common/model";
 import { FiPlus, FiSend, FiTrash2 } from "react-icons/fi";
 import toast from "react-hot-toast";
 
-const AdminNotifications = ({ sidebarOpen }) => {
+const AdminNotifications = () => {
   const [users, setUsers] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -188,10 +188,7 @@ const AdminNotifications = ({ sidebarOpen }) => {
   if (loading) return <Loader fullScreen />;
 
   return (
-    <div
-      className="container mx-auto px-6 py-8"
-      style={{ marginLeft: sidebarOpen ? 208 : 64 }}
-    >
+    <div className="container mx-auto px-6 py-8">
       {/* HEADER */}
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-6 mb-8 text-white flex justify-between items-center">
         <div>

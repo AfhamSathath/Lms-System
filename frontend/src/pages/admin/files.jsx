@@ -3,10 +3,10 @@ import { useAuth } from '../../context/Authcontext';
 import api from '../../services/api';
 import Loader from '../../components/common/loader';
 import Modal from '../../components/common/model';
-import { 
-  FiFile, 
-  FiUpload, 
-  FiTrash2, 
+import {
+  FiFile,
+  FiUpload,
+  FiTrash2,
   FiDownload,
   FiSearch,
   FiBook,
@@ -57,7 +57,7 @@ const getFileIcon = (mimeType, fileType) => {
   if (mimeType?.includes('word')) return '📘';
   if (mimeType?.includes('presentation')) return '📊';
   if (mimeType?.includes('excel')) return '📗';
-  
+
   const typeIcon = FILE_TYPES.find(t => t.value === fileType)?.icon;
   return typeIcon || '📁';
 };
@@ -88,21 +88,21 @@ const getOrdinal = (n) => {
 // Helper function to get year display text
 const getYearDisplay = (yearValue, academicYears) => {
   if (!yearValue && yearValue !== 0) return '';
-  
+
   // If it's a number like 1, convert to "1st Year"
   const yearNum = parseInt(yearValue);
   if (!isNaN(yearNum) && yearNum >= 1 && yearNum <= academicYears.length) {
     return academicYears[yearNum - 1];
   }
-  
+
   // If it's already a formatted year like "1st Year", return as is
   return yearValue;
 };
 
 // ==================== MAIN COMPONENT ====================
-const AdminFiles = ({ sidebarOpen }) => {
+const AdminFiles = () => {
   const { user } = useAuth();
-  
+
   // State
   const [state, setState] = useState({
     files: [],
@@ -138,7 +138,7 @@ const AdminFiles = ({ sidebarOpen }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
-  
+
   // Form state
   const [formData, setFormData] = useState({
     subjects: '',
@@ -150,7 +150,7 @@ const AdminFiles = ({ sidebarOpen }) => {
     isPublic: true,
     department: ''
   });
-  
+
   const [selectedFileObj, setSelectedFileObj] = useState(null);
 
   // ==================== DATA FETCHING ====================
@@ -160,7 +160,7 @@ const AdminFiles = ({ sidebarOpen }) => {
 
   const fetchData = async () => {
     setState(prev => ({ ...prev, loading: true, apiError: false }));
-    
+
     try {
       const [filesRes, subjectsRes, statsRes] = await Promise.allSettled([
         api.get('api/files'),
@@ -175,7 +175,7 @@ const AdminFiles = ({ sidebarOpen }) => {
       // Debug: Log the data
       console.log('Files data:', files);
       console.log('Subjects data:', subjects);
-      
+
       // Transform file data to handle different property names
       files = files.map(file => ({
         ...file,
@@ -213,7 +213,7 @@ const AdminFiles = ({ sidebarOpen }) => {
   // ==================== FILTERING ====================
   const filteredFiles = useMemo(() => {
     if (!state.files || state.files.length === 0) return [];
-    
+
     return state.files.filter(file => {
       try {
         // Search filter
@@ -227,7 +227,7 @@ const AdminFiles = ({ sidebarOpen }) => {
             file.subject?.code || file.subjects?.code || file.subjects?.subjectsCode,
             file.uploadedBy?.name
           ].filter(Boolean).map(field => field.toString().toLowerCase());
-          
+
           if (!searchableFields.some(field => field.includes(term))) return false;
         }
 
@@ -297,7 +297,7 @@ const AdminFiles = ({ sidebarOpen }) => {
   // Handle subject selection with auto-fill for year, semester, and department
   const handleSubjectChange = (e) => {
     const subjectId = e.target.value;
-    
+
     if (!subjectId) {
       setFormData(prev => ({
         ...prev,
@@ -308,9 +308,9 @@ const AdminFiles = ({ sidebarOpen }) => {
       }));
       return;
     }
-    
+
     const selectedSubject = state.subjects?.find(s => s._id === subjectId);
-    
+
     if (selectedSubject) {
       // Extract year - handle both string and number formats
       let yearValue = '';
@@ -331,13 +331,13 @@ const AdminFiles = ({ sidebarOpen }) => {
       } else if (selectedSubject.yearOfStudy) {
         yearValue = selectedSubject.yearOfStudy.toString();
       }
-      
+
       // Extract semester
       let semesterValue = '';
       if (selectedSubject.semester) {
         semesterValue = selectedSubject.semester.toString();
       }
-      
+
       // Extract department
       let departmentValue = '';
       if (selectedSubject.department?.name) {
@@ -345,7 +345,7 @@ const AdminFiles = ({ sidebarOpen }) => {
       } else if (selectedSubject.department) {
         departmentValue = selectedSubject.department;
       }
-      
+
       setFormData(prev => ({
         ...prev,
         subjects: subjectId,
@@ -399,7 +399,7 @@ const AdminFiles = ({ sidebarOpen }) => {
   // ==================== API ACTIONS ====================
   const handleUpload = async (e) => {
     e.preventDefault();
-    
+
     if (!selectedFileObj) {
       toast.error('Please select a file');
       return;
@@ -434,7 +434,7 @@ const AdminFiles = ({ sidebarOpen }) => {
           setUploadProgress(percent);
         }
       });
-      
+
       toast.success('File uploaded successfully');
       toggleModal('upload', false);
       fetchData();
@@ -485,7 +485,7 @@ const AdminFiles = ({ sidebarOpen }) => {
 
   const handleDelete = async (fileId) => {
     if (!window.confirm('Are you sure you want to delete this file?')) return;
-    
+
     try {
       await api.delete(`api/files/${fileId}`);
       toast.success('File deleted successfully');
@@ -512,10 +512,10 @@ const AdminFiles = ({ sidebarOpen }) => {
 
   const handleDownload = async (fileId, fileName) => {
     try {
-      const response = await api.get(`api/files/download/${fileId}`, { 
+      const response = await api.get(`api/files/download/${fileId}`, {
         responseType: 'blob'
       });
-      
+
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -524,7 +524,7 @@ const AdminFiles = ({ sidebarOpen }) => {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      
+
       toast.success('Download started');
     } catch (error) {
       toast.error('Download failed');
@@ -536,8 +536,7 @@ const AdminFiles = ({ sidebarOpen }) => {
 
   if (state.apiError) {
     return (
-      <div className="container mx-auto px-4 py-8 transition-all duration-300"
-           style={{ marginLeft: sidebarOpen ? 208 : 64 }}>
+      <div className="container mx-auto px-4 py-8 transition-all duration-300">
         <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg shadow-lg">
           <div className="flex items-center mb-4">
             <FiInfo className="h-8 w-8 text-red-500 mr-3" />
@@ -556,11 +555,10 @@ const AdminFiles = ({ sidebarOpen }) => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 transition-all duration-300"
-         style={{ marginLeft: sidebarOpen ? 208 : 64 }}>
-      
+    <div className="container mx-auto px-4 py-8 transition-all duration-300">
+
       {/* Header */}
-      <Header 
+      <Header
         stats={state.stats}
         selectedCount={state.selectedFiles.length}
         onUpload={() => toggleModal('upload', true)}
@@ -570,7 +568,7 @@ const AdminFiles = ({ sidebarOpen }) => {
       />
 
       {/* Filters */}
-      <Filters 
+      <Filters
         filters={filters}
         subjects={state.subjects}
         departments={state.departments || []}
@@ -598,7 +596,7 @@ const AdminFiles = ({ sidebarOpen }) => {
               }}
               onEdit={() => {
                 setSelectedFile(file);
-                
+
                 // Extract year number from academicYear string
                 let yearValue = '';
                 if (file.academicYear) {
@@ -607,7 +605,7 @@ const AdminFiles = ({ sidebarOpen }) => {
                     yearValue = yearMatch[1];
                   }
                 }
-                
+
                 setFormData({
                   subjects: file.subject?._id || file.subjects?._id || '',
                   year: yearValue || '',
@@ -702,7 +700,7 @@ const Header = ({ stats, selectedCount, onUpload, onStats, onBulkDelete, formatF
         <h1 className="text-3xl font-bold">File Management</h1>
         <p className="text-purple-100 mt-1">Upload, manage, and share educational materials</p>
       </div>
-      
+
       <div className="flex gap-3">
         {stats && (
           <div className="hidden md:flex items-center gap-4 mr-4 bg-white/10 rounded-lg px-4 py-2">
@@ -711,25 +709,25 @@ const Header = ({ stats, selectedCount, onUpload, onStats, onBulkDelete, formatF
             <StatBadge icon={<FiDownload />} label="Downloads" value={stats.totalDownloads || 0} />
           </div>
         )}
-        
-        <button 
-          onClick={onStats} 
+
+        <button
+          onClick={onStats}
           className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
         >
           <FiBarChart2 className="mr-2" /> Stats
         </button>
-        
+
         {selectedCount > 0 && (
-          <button 
-            onClick={onBulkDelete} 
+          <button
+            onClick={onBulkDelete}
             className="px-4 py-2 bg-red-600 rounded-lg hover:bg-red-700 transition-colors flex items-center"
           >
             <FiTrash2 className="mr-2" /> Delete ({selectedCount})
           </button>
         )}
-        
-        <button 
-          onClick={onUpload} 
+
+        <button
+          onClick={onUpload}
           className="px-4 py-2 bg-white text-purple-600 rounded-lg hover:bg-purple-50 transition-colors flex items-center"
         >
           <FiUpload className="mr-2" /> Upload
@@ -750,27 +748,27 @@ const StatBadge = ({ icon, label, value }) => (
 const Filters = ({ filters, subjects, departments, uploaders, onFilterChange, onClear, selectedCount, totalCount, selectAll, allSelected }) => {
   // Get unique years from subjects for filter
   const yearOptions = ['all', ...new Set(subjects.map(s => s.year).filter(Boolean))];
-  
+
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         <div className="md:col-span-2">
           <SearchInput value={filters.search} onChange={(v) => onFilterChange('search', v)} />
         </div>
-        
+
         <Select
           icon={<FiBook />}
           value={filters.subjects}
           onChange={(v) => onFilterChange('subjects', v)}
           options={[
             { value: 'all', label: 'All Subjects' },
-            ...subjects.map(s => ({ 
-              value: s._id, 
-              label: `${s.code || s.subjectsCode || ''} - ${s.name || s.subjectsName || 'Unknown'}` 
+            ...subjects.map(s => ({
+              value: s._id,
+              label: `${s.code || s.subjectsCode || ''} - ${s.name || s.subjectsName || 'Unknown'}`
             }))
           ]}
         />
-        
+
         <Select
           icon={<FiGrid />}
           value={filters.fileType}
@@ -792,7 +790,7 @@ const Filters = ({ filters, subjects, departments, uploaders, onFilterChange, on
             ...ACADEMIC_YEARS.map((year, idx) => ({ value: String(idx + 1), label: year }))
           ]}
         />
-        
+
         <Select
           icon={<FiGrid />}
           value={filters.semester}
@@ -802,7 +800,7 @@ const Filters = ({ filters, subjects, departments, uploaders, onFilterChange, on
             ...SEMESTERS.map(s => ({ value: String(s), label: `Semester ${s}` }))
           ]}
         />
-        
+
         {departments.length > 0 && (
           <Select
             icon={<FiBook />}
@@ -814,7 +812,7 @@ const Filters = ({ filters, subjects, departments, uploaders, onFilterChange, on
             ]}
           />
         )}
-        
+
         {uploaders.length > 0 && (
           <Select
             icon={<FiUser />}
@@ -826,7 +824,7 @@ const Filters = ({ filters, subjects, departments, uploaders, onFilterChange, on
             ]}
           />
         )}
-        
+
         <div className="flex gap-2 col-span-1">
           <input
             type="date"
@@ -843,9 +841,9 @@ const Filters = ({ filters, subjects, departments, uploaders, onFilterChange, on
             placeholder="To"
           />
         </div>
-        
-        <button 
-          onClick={onClear} 
+
+        <button
+          onClick={onClear}
           className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
         >
           Clear Filters
@@ -862,7 +860,7 @@ const Filters = ({ filters, subjects, departments, uploaders, onFilterChange, on
           />
           <span className="text-sm text-gray-600">Select All ({selectedCount} files)</span>
         </label>
-        
+
         <span className="text-sm text-gray-500">
           Showing {selectedCount} of {totalCount} files
         </span>
@@ -882,8 +880,8 @@ const SearchInput = ({ value, onChange }) => (
       className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
     />
     {value && (
-      <button 
-        onClick={() => onChange('')} 
+      <button
+        onClick={() => onChange('')}
         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
       >
         <FiX />
@@ -910,13 +908,13 @@ const Select = ({ icon, value, onChange, options }) => (
 
 const FileCard = ({ file, isSelected, onSelect, onView, onEdit, onDelete, onDownload, getFileIcon, getFileTypeColor, formatFileSize }) => {
   const fileType = FILE_TYPES.find(t => t.value === file.fileType);
-  
+
   // Get subject info safely
   const subjectName = file.subject?.name || file.subjects?.name || file.subjects?.subjectsName || 'Unknown';
   const subjectCode = file.subject?.code || file.subjects?.code || file.subjects?.subjectsCode || '';
   const uploadedByName = file.uploadedBy?.name || 'Unknown';
   const uploadedDate = file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString() : 'Unknown';
-  
+
   return (
     <div className={`bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all ${isSelected ? 'ring-2 ring-purple-500' : ''}`}>
       <div className="p-4">
@@ -1016,7 +1014,7 @@ const EmptyState = ({ onUpload }) => (
 // ==================== MODAL COMPONENTS ====================
 
 const UploadModal = ({ isOpen, onClose, formData, onInputChange, onSubjectChange, onFileSelect, onSubmit, uploading, uploadProgress, subjects, academicYears, semesters }) => {
-  const validSubjects = Array.isArray(subjects) ? subjects.filter(subject => 
+  const validSubjects = Array.isArray(subjects) ? subjects.filter(subject =>
     subject && subject._id && (subject.name || subject.subjectsName)
   ) : [];
 
@@ -1050,7 +1048,7 @@ const UploadModal = ({ isOpen, onClose, formData, onInputChange, onSubjectChange
                   const subjectName = subject.name || subject.subjectsName || 'Unnamed Subject';
                   const subjectCode = subject.code || subject.subjectsCode || '';
                   const departmentName = subject.department?.name || subject.department || '';
-                  
+
                   return (
                     <option key={subject._id} value={subject._id}>
                       {subjectCode} - {subjectName} {departmentName ? `(${departmentName})` : ''}
@@ -1083,9 +1081,8 @@ const UploadModal = ({ isOpen, onClose, formData, onInputChange, onSubjectChange
               onChange={onInputChange}
               required
               disabled={!!formData.subjects && validSubjects.length > 0}
-              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none ${
-                formData.subjects && validSubjects.length > 0 ? 'bg-gray-100 cursor-not-allowed' : ''
-              }`}
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none ${formData.subjects && validSubjects.length > 0 ? 'bg-gray-100 cursor-not-allowed' : ''
+                }`}
             >
               <option value="">-- Select Year --</option>
               {Array.isArray(academicYears) && academicYears.map((year, idx) => (
@@ -1111,9 +1108,8 @@ const UploadModal = ({ isOpen, onClose, formData, onInputChange, onSubjectChange
               onChange={onInputChange}
               required
               disabled={!!formData.subjects && validSubjects.length > 0}
-              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none ${
-                formData.subjects && validSubjects.length > 0 ? 'bg-gray-100 cursor-not-allowed' : ''
-              }`}
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none ${formData.subjects && validSubjects.length > 0 ? 'bg-gray-100 cursor-not-allowed' : ''
+                }`}
             >
               <option value="">-- Select Semester --</option>
               {Array.isArray(semesters) && semesters.map(s => (
@@ -1212,9 +1208,9 @@ const UploadModal = ({ isOpen, onClose, formData, onInputChange, onSubjectChange
               <span className="text-gray-700">{uploadProgress}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-purple-600 h-2 rounded-full transition-all duration-300" 
-                style={{ width: `${uploadProgress}%` }} 
+              <div
+                className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
               />
             </div>
           </div>
@@ -1232,16 +1228,16 @@ const UploadModal = ({ isOpen, onClose, formData, onInputChange, onSubjectChange
         )}
 
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <button 
-            type="button" 
-            onClick={onClose} 
+          <button
+            type="button"
+            onClick={onClose}
             className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancel
           </button>
-          <button 
-            type="submit" 
-            disabled={uploading || validSubjects.length === 0} 
+          <button
+            type="submit"
+            disabled={uploading || validSubjects.length === 0}
             className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {uploading ? 'Uploading...' : 'Upload File'}
@@ -1253,7 +1249,7 @@ const UploadModal = ({ isOpen, onClose, formData, onInputChange, onSubjectChange
 };
 
 const EditModal = ({ isOpen, onClose, formData, onInputChange, onSubjectChange, onSubmit, file, subjects, academicYears, semesters }) => {
-  const validSubjects = Array.isArray(subjects) ? subjects.filter(subject => 
+  const validSubjects = Array.isArray(subjects) ? subjects.filter(subject =>
     subject && subject._id && (subject.name || subject.subjectsName)
   ) : [];
 
@@ -1275,7 +1271,7 @@ const EditModal = ({ isOpen, onClose, formData, onInputChange, onSubjectChange, 
                   const subjectName = subject.name || subject.subjectsName || 'Unnamed Subject';
                   const subjectCode = subject.code || subject.subjectsCode || '';
                   const departmentName = subject.department?.name || subject.department || '';
-                  
+
                   return (
                     <option key={subject._id} value={subject._id}>
                       {subjectCode} - {subjectName} {departmentName ? `(${departmentName})` : ''}
@@ -1298,9 +1294,8 @@ const EditModal = ({ isOpen, onClose, formData, onInputChange, onSubjectChange, 
               value={formData.year || ''}
               onChange={onInputChange}
               disabled={!!formData.subjects && validSubjects.length > 0}
-              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none ${
-                formData.subjects && validSubjects.length > 0 ? 'bg-gray-100 cursor-not-allowed' : ''
-              }`}
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none ${formData.subjects && validSubjects.length > 0 ? 'bg-gray-100 cursor-not-allowed' : ''
+                }`}
             >
               <option value="">-- Select Year --</option>
               {Array.isArray(academicYears) && academicYears.map((year, idx) => (
@@ -1316,9 +1311,8 @@ const EditModal = ({ isOpen, onClose, formData, onInputChange, onSubjectChange, 
               value={formData.semester || ''}
               onChange={onInputChange}
               disabled={!!formData.subjects && validSubjects.length > 0}
-              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none ${
-                formData.subjects && validSubjects.length > 0 ? 'bg-gray-100 cursor-not-allowed' : ''
-              }`}
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none ${formData.subjects && validSubjects.length > 0 ? 'bg-gray-100 cursor-not-allowed' : ''
+                }`}
             >
               <option value="">-- Select Semester --</option>
               {Array.isArray(semesters) && semesters.map(s => (
@@ -1380,15 +1374,15 @@ const EditModal = ({ isOpen, onClose, formData, onInputChange, onSubjectChange, 
         </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <button 
-            type="button" 
-            onClick={onClose} 
+          <button
+            type="button"
+            onClick={onClose}
             className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancel
           </button>
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
           >
             Update File
@@ -1401,9 +1395,9 @@ const EditModal = ({ isOpen, onClose, formData, onInputChange, onSubjectChange, 
 
 const ViewModal = ({ isOpen, onClose, file, onDownload, onEdit, onDelete, getFileIcon, formatFileSize, getFileTypeColor }) => {
   if (!file) return null;
-  
+
   const fileType = FILE_TYPES.find(t => t.value === file.fileType);
-  
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="File Details" size="lg">
       <div className="space-y-6">
@@ -1472,26 +1466,26 @@ const ViewModal = ({ isOpen, onClose, file, onDownload, onEdit, onDelete, getFil
 
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <button 
-            onClick={() => onDownload(file._id, file.originalName)} 
+          <button
+            onClick={() => onDownload(file._id, file.originalName)}
             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
           >
             <FiDownload /> Download
           </button>
-          <button 
-            onClick={() => onEdit(file)} 
+          <button
+            onClick={() => onEdit(file)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
           >
             <FiEdit2 /> Edit
           </button>
-          <button 
-            onClick={() => onDelete(file._id)} 
+          <button
+            onClick={() => onDelete(file._id)}
             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
           >
             <FiTrash2 /> Delete
           </button>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Close
@@ -1613,14 +1607,14 @@ const BulkDeleteModal = ({ isOpen, onClose, onConfirm, count }) => (
         </div>
       </div>
       <div className="flex justify-end gap-3">
-        <button 
-          onClick={onClose} 
+        <button
+          onClick={onClose}
           className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
         >
           Cancel
         </button>
-        <button 
-          onClick={onConfirm} 
+        <button
+          onClick={onConfirm}
           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
         >
           Delete {count} File{count !== 1 ? 's' : ''}

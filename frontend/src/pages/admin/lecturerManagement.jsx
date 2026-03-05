@@ -10,7 +10,7 @@ import {
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
-const LecturerManagement = ({ sidebarOpen }) => {
+const LecturerManagement = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [state, setState] = useState({
@@ -200,7 +200,7 @@ const LecturerManagement = ({ sidebarOpen }) => {
   if (loading) return <Loader fullScreen />;
 
   return (
-    <div className={`flex-1 p-6 transition-all duration-300 ${sidebarOpen ? 'ml-0' : 'ml-0'}`}>
+    <div className="p-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl shadow-lg p-6 mb-8 text-white">
         <div className="flex justify-between items-center">
@@ -279,7 +279,7 @@ const LecturerManagement = ({ sidebarOpen }) => {
       </div>
 
       {/* Assignments Table */}
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
+      <div className="bg-white rounded-xl shadow-md overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 border-b">
             <tr>

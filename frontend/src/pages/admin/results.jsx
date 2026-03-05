@@ -4,7 +4,7 @@ import Loader from '../../components/common/loader';
 import Modal from '../../components/common/model';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { 
+import {
   FiAward, FiPlus, FiEdit2, FiTrash2, FiSearch, FiUser, FiDownload, FiFilter,
   FiBarChart2, FiPrinter, FiDownload as FiDownloadIcon, FiTrendingUp,
   FiPieChart, FiStar, FiClock, FiCheckCircle, FiXCircle, FiUsers,
@@ -20,7 +20,7 @@ const gradePoints = {
   'D+': 1.3, 'D': 1.0, 'E': 0.0,
 };
 
-const AdminResults = ({ sidebarOpen }) => {
+const AdminResults = () => {
   const [results, setResults] = useState([]);
   const [filteredResults, setFilteredResults] = useState([]);
   const [students, setStudents] = useState([]);
@@ -61,7 +61,7 @@ const AdminResults = ({ sidebarOpen }) => {
   const academicYears = [
     '1st Year', '2nd Year', '3rd Year', '4th Year'
   ];
-  
+
   const semesters = [1, 2];
   const examTypes = ['midterm', 'final', 'quiz', 'assignment', 'supplementary'];
 
@@ -91,11 +91,11 @@ const AdminResults = ({ sidebarOpen }) => {
   const fetchData = async () => {
     try {
       const [resultsRes, studentsRes, subjectsRes] = await Promise.all([
-        api.get('api/results'), 
-        api.get('api/users?role=student'), 
+        api.get('api/results'),
+        api.get('api/users?role=student'),
         api.get('api/subjects')
       ]);
-      
+
       // Ensure results have proper structure
       const processedResults = (resultsRes.data.results || []).map(result => ({
         ...result,
@@ -103,9 +103,9 @@ const AdminResults = ({ sidebarOpen }) => {
         semester: result.semester || 1,
         marks: result.marks || 0
       }));
-      
+
       setResults(processedResults);
-      
+
       // Process subjects to ensure they have year and semester information
       const processedSubjects = (subjectsRes.data.subjects || []).map(subject => ({
         ...subject,
@@ -113,7 +113,7 @@ const AdminResults = ({ sidebarOpen }) => {
         semester: subject.semester || 1,
         department: subject.department || 'General'
       }));
-      
+
       setSubjects(processedSubjects);
       setFilteredSubjects(processedSubjects);
       setStudents(studentsRes.data.users || []);
@@ -123,30 +123,30 @@ const AdminResults = ({ sidebarOpen }) => {
       setDepartments(uniqueDepts);
     } catch (error) {
       toast.error('Failed to fetch data');
-    } finally { 
-      setLoading(false); 
+    } finally {
+      setLoading(false);
     }
   };
 
   const filterResults = () => {
     let filtered = results || [];
-    
+
     if (selectedYear !== 'all') {
       filtered = filtered.filter(r => r.year === selectedYear);
     }
-    
+
     if (selectedSemester !== 'all') {
       filtered = filtered.filter(r => r.semester === parseInt(selectedSemester));
     }
-    
+
     if (selectedExamType !== 'all') {
       filtered = filtered.filter(r => r.examType === selectedExamType);
     }
-    
+
     if (selectedDepartment !== 'all') {
       filtered = filtered.filter(r => r.student?.department === selectedDepartment);
     }
-    
+
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(r =>
@@ -158,12 +158,12 @@ const AdminResults = ({ sidebarOpen }) => {
         r.year?.toLowerCase().includes(term)
       );
     }
-    
+
     setFilteredResults(filtered);
   };
 
   const resetForm = () => {
-    setFormData({ 
+    setFormData({
       student: '', subject: '', year: '', semester: '', examType: 'final', marks: ''
     });
     setLockedFields({
@@ -177,7 +177,7 @@ const AdminResults = ({ sidebarOpen }) => {
   const handleStudentChange = (e) => {
     const studentId = e.target.value;
     const selectedStudent = students.find(s => s._id === studentId);
-    
+
     setFormData(prev => ({
       ...prev,
       student: studentId
@@ -185,11 +185,11 @@ const AdminResults = ({ sidebarOpen }) => {
 
     if (selectedStudent && selectedStudent.department) {
       // Filter subjects based on student's department
-      const deptSubjects = subjects.filter(s => 
+      const deptSubjects = subjects.filter(s =>
         s.department === selectedStudent.department || s.department === 'General'
       );
       setFilteredSubjects(deptSubjects);
-      
+
       if (deptSubjects.length === 0) {
         toast.info(`No subjects found for ${selectedStudent.department} department`);
       }
@@ -202,7 +202,7 @@ const AdminResults = ({ sidebarOpen }) => {
   const handleSubjectChange = (e) => {
     const subjectId = e.target.value;
     const selectedSubject = subjects.find(s => s._id === subjectId);
-    
+
     if (selectedSubject) {
       setFormData(prev => ({
         ...prev,
@@ -210,7 +210,7 @@ const AdminResults = ({ sidebarOpen }) => {
         year: selectedSubject.year || prev.year,
         semester: selectedSubject.semester || prev.semester
       }));
-      
+
       setLockedFields({
         year: true,
         semester: true
@@ -238,10 +238,10 @@ const AdminResults = ({ sidebarOpen }) => {
       semester: true
     });
     setShowEditModal(true);
-    
+
     // Filter subjects for the student's department in edit mode
     if (result.student?.department) {
-      const deptSubjects = subjects.filter(s => 
+      const deptSubjects = subjects.filter(s =>
         s.department === result.student.department || s.department === 'General'
       );
       setFilteredSubjects(deptSubjects);
@@ -251,7 +251,7 @@ const AdminResults = ({ sidebarOpen }) => {
   const calculateGradeStatus = (marks) => {
     const numMarks = parseFloat(marks) || 0;
     let grade;
-    
+
     if (numMarks >= 75) grade = 'A+';
     else if (numMarks >= 70) grade = 'A';
     else if (numMarks >= 65) grade = 'A-';
@@ -274,14 +274,14 @@ const AdminResults = ({ sidebarOpen }) => {
   // GPA Calculation Functions
   const calculateGPA = (studentId, year = null, semester = null) => {
     let studentResults = results.filter(r => r.student?._id === studentId);
-    
+
     if (year && year !== 'N/A') {
       studentResults = studentResults.filter(r => r.year === year);
     }
     if (semester) {
       studentResults = studentResults.filter(r => r.semester === parseInt(semester));
     }
-    
+
     if (studentResults.length === 0) return 0;
 
     const totalPoints = studentResults.reduce((sum, r) => {
@@ -307,7 +307,7 @@ const AdminResults = ({ sidebarOpen }) => {
   const calculateYearlyGPA = (studentId) => {
     const yearlyGPAs = [];
     const studentResults = results.filter(r => r.student?._id === studentId);
-    
+
     const yearGroups = {};
     studentResults.forEach(r => {
       if (!yearGroups[r.year]) {
@@ -330,7 +330,7 @@ const AdminResults = ({ sidebarOpen }) => {
         }
       }
 
-      const yearGPA = semesterGPAs.length > 0 
+      const yearGPA = semesterGPAs.length > 0
         ? (semesterGPAs.reduce((sum, sem) => sum + sem.gpa, 0) / semesterGPAs.length).toFixed(2)
         : '0.00';
 
@@ -352,7 +352,7 @@ const AdminResults = ({ sidebarOpen }) => {
   const calculateSemesterGPA = (studentId) => {
     const semesterGPAs = [];
     const studentResults = results.filter(r => r.student?._id === studentId);
-    
+
     const yearSemGroups = {};
     studentResults.forEach(r => {
       const key = `${r.year}-S${r.semester}`;
@@ -396,17 +396,17 @@ const AdminResults = ({ sidebarOpen }) => {
   // Department Statistics Functions
   const calculateDepartmentStats = () => {
     const stats = {};
-    
+
     departments.forEach(dept => {
       const deptStudents = students.filter(s => s.department === dept);
       const deptResults = results.filter(r => deptStudents.some(s => s._id === r.student?._id));
-      
+
       if (deptStudents.length > 0) {
         const avgCGPA = deptStudents.reduce((sum, s) => sum + parseFloat(calculateCGPA(s._id) || 0), 0) / deptStudents.length;
-        
+
         const passedResults = deptResults.filter(r => calculateGradeStatus(r.marks).status === 'pass').length;
         const passRate = deptResults.length > 0 ? (passedResults / deptResults.length) * 100 : 0;
-        
+
         const gradeDist = {};
         deptResults.forEach(r => {
           const { grade } = calculateGradeStatus(r.marks);
@@ -450,11 +450,11 @@ const AdminResults = ({ sidebarOpen }) => {
   // Yearly Statistics Functions
   const calculateYearlyStats = () => {
     const stats = {};
-    
+
     academicYears.forEach(year => {
       const yearResults = results.filter(r => r.year === year);
       const yearStudents = [...new Set(yearResults.map(r => r.student?._id))];
-      
+
       if (yearResults.length > 0) {
         const semesterStats = {};
         for (let sem = 1; sem <= 2; sem++) {
@@ -472,7 +472,7 @@ const AdminResults = ({ sidebarOpen }) => {
 
         const deptPerformance = {};
         departments.forEach(dept => {
-          const deptYearResults = yearResults.filter(r => 
+          const deptYearResults = yearResults.filter(r =>
             students.some(s => s._id === r.student?._id && s.department === dept)
           );
           if (deptYearResults.length > 0) {
@@ -499,7 +499,7 @@ const AdminResults = ({ sidebarOpen }) => {
   const analyzeStudentPerformance = (studentId) => {
     const studentResults = results.filter(r => r.student?._id === studentId);
     const student = students.find(s => s._id === studentId);
-    
+
     if (studentResults.length === 0) return null;
 
     const totalSubjects = studentResults.length;
@@ -725,7 +725,7 @@ const AdminResults = ({ sidebarOpen }) => {
   const handlePrintTranscript = () => {
     const printContent = document.getElementById('transcript-content');
     const originalContents = document.body.innerHTML;
-    
+
     document.body.innerHTML = printContent.outerHTML;
     window.print();
     document.body.innerHTML = originalContents;
@@ -740,16 +740,16 @@ const AdminResults = ({ sidebarOpen }) => {
     toast.loading('Generating PDF...', { id: 'pdf' });
 
     try {
-      const canvas = await html2canvas(input, { 
+      const canvas = await html2canvas(input, {
         scale: 2,
         backgroundColor: '#ffffff',
         logging: false,
         allowTaint: true,
         useCORS: true
       });
-      
+
       const imgData = canvas.toDataURL('image/png');
-      
+
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -758,20 +758,20 @@ const AdminResults = ({ sidebarOpen }) => {
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      
+
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
       const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      
+
       const width = imgWidth * ratio;
       const height = imgHeight * ratio;
-      
+
       const x = (pdfWidth - width) / 2;
       const y = (pdfHeight - height) / 2;
 
       pdf.addImage(imgData, 'PNG', x, y, width, height);
       pdf.save(`transcript_${selectedStudent?.studentId || 'student'}.pdf`);
-      
+
       toast.success('PDF downloaded successfully!', { id: 'pdf' });
     } catch (error) {
       console.error('PDF generation error:', error);
@@ -791,20 +791,20 @@ const AdminResults = ({ sidebarOpen }) => {
   };
 
   const getGradeColor = (grade) => {
-    const colors = { 
-      'A+':'bg-green-100 text-green-800',
-      'A':'bg-green-100 text-green-800',
-      'A-':'bg-green-100 text-green-800',
-      'B+':'bg-blue-100 text-blue-800',
-      'B':'bg-blue-100 text-blue-800',
-      'B-':'bg-blue-100 text-blue-800',
-      'C+':'bg-yellow-100 text-yellow-800',
-      'C':'bg-yellow-100 text-yellow-800',
-      'C-':'bg-orange-100 text-orange-800',
-      'D+':'bg-orange-100 text-orange-800',
-      'D':'bg-red-100 text-red-800',
-      'E':'bg-red-100 text-red-800',
-      'F':'bg-red-100 text-red-800'
+    const colors = {
+      'A+': 'bg-green-100 text-green-800',
+      'A': 'bg-green-100 text-green-800',
+      'A-': 'bg-green-100 text-green-800',
+      'B+': 'bg-blue-100 text-blue-800',
+      'B': 'bg-blue-100 text-blue-800',
+      'B-': 'bg-blue-100 text-blue-800',
+      'C+': 'bg-yellow-100 text-yellow-800',
+      'C': 'bg-yellow-100 text-yellow-800',
+      'C-': 'bg-orange-100 text-orange-800',
+      'D+': 'bg-orange-100 text-orange-800',
+      'D': 'bg-red-100 text-red-800',
+      'E': 'bg-red-100 text-red-800',
+      'F': 'bg-red-100 text-red-800'
     };
     return colors[grade] || 'bg-gray-100 text-gray-800';
   };
@@ -827,8 +827,8 @@ const AdminResults = ({ sidebarOpen }) => {
   if (loading) return <Loader fullScreen />;
 
   return (
-    <div className="container mx-auto px-4 py-8 transition-all duration-300" style={{ marginLeft: sidebarOpen ? 208 : 64 }}>
-      
+    <div className="container mx-auto px-4 py-8 transition-all duration-300">
+
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl shadow-xl p-6 mb-8 text-white flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex-1 min-w-0">
@@ -867,13 +867,13 @@ const AdminResults = ({ sidebarOpen }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {academicYears.map(year => {
           const yearResults = results.filter(r => r.year === year);
-          const avgMarks = yearResults.length > 0 
+          const avgMarks = yearResults.length > 0
             ? (yearResults.reduce((sum, r) => sum + r.marks, 0) / yearResults.length).toFixed(2)
             : '0.00';
-          
+
           const sem1Results = yearResults.filter(r => r.semester === 1).length;
           const sem2Results = yearResults.filter(r => r.semester === 2).length;
-          
+
           return (
             <div key={year} className="bg-white rounded-xl shadow-lg p-4">
               <div className="flex items-center justify-between mb-2">
@@ -887,7 +887,7 @@ const AdminResults = ({ sidebarOpen }) => {
               </div>
               <p className="text-xs text-gray-500">Total: {yearResults.length} results</p>
               <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-                <div 
+                <div
                   className="bg-purple-600 h-1.5 rounded-full"
                   style={{ width: `${parseFloat(avgMarks)}%` }}
                 ></div>
@@ -902,10 +902,10 @@ const AdminResults = ({ sidebarOpen }) => {
         {departments.slice(0, 4).map(dept => {
           const deptStudents = students.filter(s => s.department === dept);
           const deptResults = results.filter(r => deptStudents.some(s => s._id === r.student?._id));
-          const avgCGPA = deptStudents.length > 0 
+          const avgCGPA = deptStudents.length > 0
             ? (deptStudents.reduce((sum, s) => sum + parseFloat(calculateCGPA(s._id) || 0), 0) / deptStudents.length).toFixed(2)
             : '0.00';
-          
+
           return (
             <div key={dept} className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex items-center justify-between mb-4">
@@ -928,7 +928,7 @@ const AdminResults = ({ sidebarOpen }) => {
                   <span className="font-semibold text-purple-600">{avgCGPA}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
+                  <div
                     className="bg-purple-600 h-2 rounded-full"
                     style={{ width: `${(parseFloat(avgCGPA) / 4.0) * 100}%` }}
                   ></div>
@@ -979,8 +979,8 @@ const AdminResults = ({ sidebarOpen }) => {
             <div>
               <p className="text-gray-500 text-sm">Passing Rate</p>
               <p className="text-2xl font-bold text-gray-800">
-                {results.length > 0 
-                  ? Math.round((results.filter(r => calculateGradeStatus(r.marks).status === 'pass').length / results.length) * 100) 
+                {results.length > 0
+                  ? Math.round((results.filter(r => calculateGradeStatus(r.marks).status === 'pass').length / results.length) * 100)
                   : 0}%
               </p>
             </div>
@@ -1001,7 +1001,7 @@ const AdminResults = ({ sidebarOpen }) => {
           {students.slice(0, 6).map(student => {
             const analysis = analyzeStudentPerformance(student._id);
             if (!analysis) return null;
-            
+
             return (
               <div key={student._id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
                 <div className="p-6">
@@ -1016,11 +1016,10 @@ const AdminResults = ({ sidebarOpen }) => {
                         <p className="text-xs text-gray-500">{student.studentId}</p>
                       </div>
                     </div>
-                    <div className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      analysis.overall.improvementTrend === 'improving' ? 'bg-green-100 text-green-800' :
-                      analysis.overall.improvementTrend === 'declining' ? 'bg-red-100 text-red-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
+                    <div className={`px-2 py-1 rounded-full text-xs font-semibold ${analysis.overall.improvementTrend === 'improving' ? 'bg-green-100 text-green-800' :
+                        analysis.overall.improvementTrend === 'declining' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                      }`}>
                       {analysis.overall.improvementTrend}
                     </div>
                   </div>
@@ -1148,8 +1147,8 @@ const AdminResults = ({ sidebarOpen }) => {
           {/* Academic Year */}
           <div className="relative">
             <FiCalendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select 
-              value={selectedYear} 
+            <select
+              value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
@@ -1161,8 +1160,8 @@ const AdminResults = ({ sidebarOpen }) => {
           {/* Semester */}
           <div className="relative">
             <FiTimeIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select 
-              value={selectedSemester} 
+            <select
+              value={selectedSemester}
               onChange={(e) => setSelectedSemester(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
@@ -1174,8 +1173,8 @@ const AdminResults = ({ sidebarOpen }) => {
           {/* Exam Type */}
           <div className="relative">
             <FiFilter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select 
-              value={selectedExamType} 
+            <select
+              value={selectedExamType}
               onChange={(e) => setSelectedExamType(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
@@ -1187,8 +1186,8 @@ const AdminResults = ({ sidebarOpen }) => {
           {/* Department */}
           <div className="relative">
             <FiFilter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select 
-              value={selectedDepartment} 
+            <select
+              value={selectedDepartment}
               onChange={(e) => setSelectedDepartment(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
@@ -1200,13 +1199,13 @@ const AdminResults = ({ sidebarOpen }) => {
 
         {/* Clear Filters Button */}
         <div className="mt-4 flex justify-end">
-          <button 
-            onClick={() => { 
-              setSearchTerm(''); 
+          <button
+            onClick={() => {
+              setSearchTerm('');
               setSelectedYear('all');
-              setSelectedSemester('all'); 
-              setSelectedExamType('all'); 
-              setSelectedDepartment('all'); 
+              setSelectedSemester('all');
+              setSelectedExamType('all');
+              setSelectedDepartment('all');
             }}
             className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
           >
@@ -1243,7 +1242,7 @@ const AdminResults = ({ sidebarOpen }) => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
-                          <FiUser className="h-4 w-4 text-purple-600"/>
+                          <FiUser className="h-4 w-4 text-purple-600" />
                         </div>
                         <div className="ml-3">
                           <p className="text-sm font-medium text-gray-900">{r.student?.name || 'N/A'}</p>
@@ -1270,41 +1269,40 @@ const AdminResults = ({ sidebarOpen }) => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        status === 'pass' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${status === 'pass' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
                         {status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{cgpa}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button 
-                        onClick={() => openEditModal(r)} 
+                      <button
+                        onClick={() => openEditModal(r)}
                         className="text-blue-600 hover:text-blue-900 mr-3"
                         title="Edit Result"
                       >
-                        <FiEdit2 className="h-5 w-5"/>
+                        <FiEdit2 className="h-5 w-5" />
                       </button>
-                      <button 
-                        onClick={() => handleDelete(r._id)} 
+                      <button
+                        onClick={() => handleDelete(r._id)}
                         className="text-red-600 hover:text-red-900 mr-3"
                         title="Delete Result"
                       >
-                        <FiTrash2 className="h-5 w-5"/>
+                        <FiTrash2 className="h-5 w-5" />
                       </button>
-                      <button 
-                        onClick={() => handleViewTranscript(r.student)} 
+                      <button
+                        onClick={() => handleViewTranscript(r.student)}
                         className="text-green-600 hover:text-green-900 mr-3"
                         title="View Transcript"
                       >
-                        <FiPrinter className="h-5 w-5"/>
+                        <FiPrinter className="h-5 w-5" />
                       </button>
-                      <button 
-                        onClick={() => handleViewSemesterGPA(r.student)} 
+                      <button
+                        onClick={() => handleViewSemesterGPA(r.student)}
                         className="text-purple-600 hover:text-purple-900"
                         title="Semester GPA"
                       >
-                        <FiBarChart2 className="h-5 w-5"/>
+                        <FiBarChart2 className="h-5 w-5" />
                       </button>
                     </td>
                   </tr>
@@ -1313,10 +1311,10 @@ const AdminResults = ({ sidebarOpen }) => {
             </tbody>
           </table>
         </div>
-        
+
         {filteredResults.length === 0 && (
           <div className="text-center py-12">
-            <FiAward className="h-16 w-16 text-gray-400 mx-auto mb-4"/>
+            <FiAward className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500 text-lg">No results found</p>
           </div>
         )}
@@ -1328,9 +1326,9 @@ const AdminResults = ({ sidebarOpen }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Student</label>
-              <select 
-                name="student" 
-                value={formData.student} 
+              <select
+                name="student"
+                value={formData.student}
                 onChange={handleStudentChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -1345,9 +1343,9 @@ const AdminResults = ({ sidebarOpen }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-              <select 
-                name="subject" 
-                value={formData.subject} 
+              <select
+                name="subject"
+                value={formData.subject}
                 onChange={handleSubjectChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -1367,15 +1365,14 @@ const AdminResults = ({ sidebarOpen }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Academic Year {lockedFields.year && <FiLock className="inline ml-1 text-gray-500" size={14} />}
               </label>
-              <select 
-                name="year" 
-                value={formData.year} 
-                onChange={handleInputChange} 
+              <select
+                name="year"
+                value={formData.year}
+                onChange={handleInputChange}
                 required
                 disabled={lockedFields.year}
-                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                  lockedFields.year ? 'bg-gray-100 cursor-not-allowed' : ''
-                }`}
+                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${lockedFields.year ? 'bg-gray-100 cursor-not-allowed' : ''
+                  }`}
               >
                 <option value="">Select Year</option>
                 {academicYears.map(year => <option key={year} value={year}>{year}</option>)}
@@ -1390,15 +1387,14 @@ const AdminResults = ({ sidebarOpen }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Semester {lockedFields.semester && <FiLock className="inline ml-1 text-gray-500" size={14} />}
               </label>
-              <select 
-                name="semester" 
-                value={formData.semester} 
-                onChange={handleInputChange} 
+              <select
+                name="semester"
+                value={formData.semester}
+                onChange={handleInputChange}
                 required
                 disabled={lockedFields.semester}
-                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                  lockedFields.semester ? 'bg-gray-100 cursor-not-allowed' : ''
-                }`}
+                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${lockedFields.semester ? 'bg-gray-100 cursor-not-allowed' : ''
+                  }`}
               >
                 <option value="">Select Semester</option>
                 {semesters.map(s => <option key={s} value={s}>Semester {s}</option>)}
@@ -1411,10 +1407,10 @@ const AdminResults = ({ sidebarOpen }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Exam Type</label>
-              <select 
-                name="examType" 
-                value={formData.examType} 
-                onChange={handleInputChange} 
+              <select
+                name="examType"
+                value={formData.examType}
+                onChange={handleInputChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
@@ -1423,29 +1419,29 @@ const AdminResults = ({ sidebarOpen }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Marks</label>
-              <input 
-                type="number" 
-                name="marks" 
-                min="0" 
-                max="100" 
-                step="0.01" 
-                value={formData.marks} 
-                onChange={handleInputChange} 
+              <input
+                type="number"
+                name="marks"
+                min="0"
+                max="100"
+                step="0.01"
+                value={formData.marks}
+                onChange={handleInputChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
           </div>
           <div className="flex justify-end space-x-3 pt-4">
-            <button 
-              type="button" 
-              onClick={() => { setShowAddModal(false); resetForm(); }} 
+            <button
+              type="button"
+              onClick={() => { setShowAddModal(false); resetForm(); }}
               className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
             >
               Cancel
             </button>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
             >
               Add Result
@@ -1460,9 +1456,9 @@ const AdminResults = ({ sidebarOpen }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Student</label>
-              <select 
-                name="student" 
-                value={formData.student} 
+              <select
+                name="student"
+                value={formData.student}
                 onChange={handleStudentChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -1477,9 +1473,9 @@ const AdminResults = ({ sidebarOpen }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-              <select 
-                name="subject" 
-                value={formData.subject} 
+              <select
+                name="subject"
+                value={formData.subject}
                 onChange={handleSubjectChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -1496,10 +1492,10 @@ const AdminResults = ({ sidebarOpen }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Academic Year <FiLock className="inline ml-1 text-gray-500" size={14} />
               </label>
-              <select 
-                name="year" 
-                value={formData.year} 
-                onChange={handleInputChange} 
+              <select
+                name="year"
+                value={formData.year}
+                onChange={handleInputChange}
                 required
                 disabled={true}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed focus:outline-none"
@@ -1512,10 +1508,10 @@ const AdminResults = ({ sidebarOpen }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Semester <FiLock className="inline ml-1 text-gray-500" size={14} />
               </label>
-              <select 
-                name="semester" 
-                value={formData.semester} 
-                onChange={handleInputChange} 
+              <select
+                name="semester"
+                value={formData.semester}
+                onChange={handleInputChange}
                 required
                 disabled={true}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed focus:outline-none"
@@ -1526,10 +1522,10 @@ const AdminResults = ({ sidebarOpen }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Exam Type</label>
-              <select 
-                name="examType" 
-                value={formData.examType} 
-                onChange={handleInputChange} 
+              <select
+                name="examType"
+                value={formData.examType}
+                onChange={handleInputChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
@@ -1538,29 +1534,29 @@ const AdminResults = ({ sidebarOpen }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Marks</label>
-              <input 
-                type="number" 
-                name="marks" 
-                min="0" 
-                max="100" 
-                step="0.01" 
-                value={formData.marks} 
-                onChange={handleInputChange} 
+              <input
+                type="number"
+                name="marks"
+                min="0"
+                max="100"
+                step="0.01"
+                value={formData.marks}
+                onChange={handleInputChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
           </div>
           <div className="flex justify-end space-x-3 pt-4">
-            <button 
-              type="button" 
-              onClick={() => { setShowEditModal(false); setSelectedResult(null); resetForm(); }} 
+            <button
+              type="button"
+              onClick={() => { setShowEditModal(false); setSelectedResult(null); resetForm(); }}
               className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
             >
               Cancel
             </button>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
             >
               Save Changes
@@ -1574,11 +1570,11 @@ const AdminResults = ({ sidebarOpen }) => {
         <form onSubmit={handleBulkUpload} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">CSV File</label>
-            <input 
-              type="file" 
-              accept=".csv" 
+            <input
+              type="file"
+              accept=".csv"
               onChange={e => setBulkFile(e.target.files[0])}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" 
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
             <p className="text-xs text-gray-500 mt-1">Upload CSV with columns: StudentID, SubjectCode, Year, Semester, ExamType, Marks</p>
             <p className="text-xs text-gray-500">Year options: 1st Year, 2nd Year, 3rd Year, 4th Year | Semester: 1 or 2</p>
@@ -1587,23 +1583,23 @@ const AdminResults = ({ sidebarOpen }) => {
             </p>
           </div>
           <div className="flex justify-between pt-4">
-            <button 
-              type="button" 
-              onClick={handleDownloadTemplate} 
+            <button
+              type="button"
+              onClick={handleDownloadTemplate}
               className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 flex items-center"
             >
               <FiDownloadIcon className="mr-2" /> Download Template
             </button>
             <div className="flex space-x-3">
-              <button 
-                type="button" 
-                onClick={() => { setShowBulkUploadModal(false); setBulkFile(null); }} 
+              <button
+                type="button"
+                onClick={() => { setShowBulkUploadModal(false); setBulkFile(null); }}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
               >
                 Cancel
               </button>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
               >
                 Upload
@@ -1618,7 +1614,7 @@ const AdminResults = ({ sidebarOpen }) => {
         <div id="transcript-content" className="p-6 bg-white">
           {/* Header */}
           <div className="text-center mb-8">
-            <img src="/public/esn.webp" alt="University Logo" className="mx-auto mb-2 h-16"/>
+            <img src="/public/esn.webp" alt="University Logo" className="mx-auto mb-2 h-16" />
             <h2 className="text-2xl font-bold text-gray-900">Academic Transcript</h2>
             <p className="text-gray-600">Trincomalee Campus ,Eastern University Of SriLanka</p>
           </div>
@@ -1658,7 +1654,7 @@ const AdminResults = ({ sidebarOpen }) => {
                       <span className="text-purple-600 font-semibold">GPA: {sem.gpa}</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2.5">
-                      <div 
+                      <div
                         className="bg-purple-600 h-2.5 rounded-full transition-all duration-300"
                         style={{ width: `${percentage}%` }}
                       ></div>
@@ -1759,7 +1755,7 @@ const AdminResults = ({ sidebarOpen }) => {
                     <span className="text-purple-600 font-semibold">GPA: {sem.gpa}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div 
+                    <div
                       className="bg-purple-600 h-2.5 rounded-full transition-all duration-300"
                       style={{ width: `${percentage}%` }}
                     ></div>
@@ -1824,10 +1820,9 @@ const AdminResults = ({ sidebarOpen }) => {
                 <p className="text-sm text-blue-600 font-medium">Total Subjects</p>
                 <p className="text-2xl font-bold text-blue-700">{studentAnalysis.overall.totalSubjects}</p>
               </div>
-              <div className={`rounded-lg p-4 ${
-                studentAnalysis.overall.improvementTrend === 'improving' ? 'bg-green-50' :
-                studentAnalysis.overall.improvementTrend === 'declining' ? 'bg-red-50' : 'bg-yellow-50'
-              }`}>
+              <div className={`rounded-lg p-4 ${studentAnalysis.overall.improvementTrend === 'improving' ? 'bg-green-50' :
+                  studentAnalysis.overall.improvementTrend === 'declining' ? 'bg-red-50' : 'bg-yellow-50'
+                }`}>
                 <p className="text-sm font-medium">Trend</p>
                 <p className="text-2xl font-bold capitalize">{studentAnalysis.overall.improvementTrend}</p>
               </div>
@@ -1884,7 +1879,7 @@ const AdminResults = ({ sidebarOpen }) => {
                       <span className="text-purple-600 font-semibold">{sem.averageMarks}% Avg</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
+                      <div
                         className="bg-purple-600 h-2 rounded-full"
                         style={{ width: `${sem.averageMarks}%` }}
                       ></div>
@@ -1991,7 +1986,7 @@ const AdminResults = ({ sidebarOpen }) => {
                             <span className="w-24 text-sm">{year}:</span>
                             <div className="flex-1 ml-2">
                               <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div 
+                                <div
                                   className="bg-purple-600 h-2 rounded-full"
                                   style={{ width: `${avg}%` }}
                                 ></div>
@@ -2063,7 +2058,7 @@ const AdminResults = ({ sidebarOpen }) => {
                               <p>Average: <span className="font-semibold text-purple-600">{semStats.avgMarks}%</span></p>
                               <p>Pass Rate: <span className="font-semibold text-green-600">{semStats.passRate}%</span></p>
                               <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-                                <div 
+                                <div
                                   className="bg-purple-600 h-1.5 rounded-full"
                                   style={{ width: `${semStats.avgMarks}%` }}
                                 ></div>
@@ -2089,7 +2084,7 @@ const AdminResults = ({ sidebarOpen }) => {
                               <span className="font-semibold text-purple-600">{avg}%</span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-                              <div 
+                              <div
                                 className="bg-purple-600 h-1.5 rounded-full"
                                 style={{ width: `${avg}%` }}
                               ></div>

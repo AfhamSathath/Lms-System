@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import { 
-  FiCalendar, FiPlus, FiEdit2, FiTrash2, FiSearch, FiClock, FiMapPin, FiBook, FiUsers, FiFilter, FiChevronDown 
+import {
+  FiCalendar, FiPlus, FiEdit2, FiTrash2, FiSearch, FiClock, FiMapPin, FiBook, FiUsers, FiFilter, FiChevronDown
 } from 'react-icons/fi';
 
 import api from '../../services/api';
 import Loader from '../../components/common/loader';
 import Modal from '../../components/common/model';
 
-const AdminTimetables = ({ sidebarOpen }) => {
+const AdminTimetables = () => {
   const [loading, setLoading] = useState(true);
   const [timetables, setTimetables] = useState([]);
   const [filteredTimetables, setFilteredTimetables] = useState([]);
@@ -160,7 +160,7 @@ const AdminTimetables = ({ sidebarOpen }) => {
 
   // Badge color for year
   const getYearColor = year => {
-    switch(year){
+    switch (year) {
       case '1st Year': return 'bg-purple-200 text-purple-800';
       case '2nd Year': return 'bg-green-200 text-green-800';
       case '3rd Year': return 'bg-blue-200 text-blue-800';
@@ -172,7 +172,7 @@ const AdminTimetables = ({ sidebarOpen }) => {
   if (loading) return <Loader fullScreen />;
 
   return (
-    <div className="container mx-auto px-4 py-8 transition-all duration-300" style={{ marginLeft: sidebarOpen ? 208 : 64 }}>
+    <div className="container mx-auto px-4 py-8 transition-all duration-300">
 
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl shadow-xl p-6 mb-8 text-white flex flex-col md:flex-row md:items-center md:justify-between">
@@ -180,8 +180,8 @@ const AdminTimetables = ({ sidebarOpen }) => {
           <h1 className="text-2xl md:text-3xl font-bold">Exam Timetables</h1>
           <p className="text-purple-100 mt-1">Manage exam schedules across 4 years • 8 semesters</p>
         </div>
-        <button onClick={()=>setShowAddModal(true)} className="mt-4 md:mt-0 bg-white text-purple-600 px-6 py-3 rounded-lg hover:bg-gray-100 transition-colors flex items-center shadow-lg">
-          <FiPlus className="mr-2"/> Add Schedule
+        <button onClick={() => setShowAddModal(true)} className="mt-4 md:mt-0 bg-white text-purple-600 px-6 py-3 rounded-lg hover:bg-gray-100 transition-colors flex items-center shadow-lg">
+          <FiPlus className="mr-2" /> Add Schedule
         </button>
       </div>
 
@@ -200,39 +200,39 @@ const AdminTimetables = ({ sidebarOpen }) => {
           </div>
           <div className="relative">
             <FiCalendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select value={selectedYear} onChange={e=>setSelectedYear(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none appearance-none">
+            <select value={selectedYear} onChange={e => setSelectedYear(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none appearance-none">
               <option value="all">All Years</option>
-              {academicYears.map(y=><option key={y} value={y}>{y}</option>)}
+              {academicYears.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
-            <FiChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"/>
+            <FiChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
           </div>
           <div className="relative">
             <FiFilter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select value={selectedSemester} onChange={e=>setSelectedSemester(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none appearance-none">
+            <select value={selectedSemester} onChange={e => setSelectedSemester(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none appearance-none">
               <option value="all">All Semesters</option>
-              {semesters.map(s=><option key={s} value={s}>{s}</option>)}
+              {semesters.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
-            <FiChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"/>
+            <FiChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
           </div>
           <div className="relative">
             <FiClock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select value={selectedExamType} onChange={e=>setSelectedExamType(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none appearance-none">
+            <select value={selectedExamType} onChange={e => setSelectedExamType(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none appearance-none">
               <option value="all">All Exam Types</option>
-              {examTypes.map(t=><option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}</option>)}
+              {examTypes.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
             </select>
-            <FiChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"/>
+            <FiChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
           </div>
           <div className="relative">
             <FiUsers className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <select value={selectedDepartment} onChange={e=>setSelectedDepartment(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none appearance-none">
+            <select value={selectedDepartment} onChange={e => setSelectedDepartment(e.target.value)} className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none appearance-none">
               <option value="all">All Departments</option>
-              {departments.map(d=><option key={d} value={d}>{d}</option>)}
+              {departments.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
-            <FiChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"/>
+            <FiChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
           </div>
         </div>
         <div className="mt-4 flex justify-end">
-          <button onClick={()=>{
+          <button onClick={() => {
             setSearchTerm('');
             setSelectedYear('all');
             setSelectedSemester('all');
@@ -247,7 +247,7 @@ const AdminTimetables = ({ sidebarOpen }) => {
       {/* Timetable Cards */}
       {filteredTimetables.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTimetables.map(t=>(
+          {filteredTimetables.map(t => (
             <div key={t._id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-shadow">
               <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
                 <div className="flex justify-between items-start">
@@ -259,14 +259,14 @@ const AdminTimetables = ({ sidebarOpen }) => {
                 </div>
               </div>
               <div className="p-6 space-y-3">
-                <div className="flex items-center text-gray-600"><FiCalendar className="mr-2 text-purple-500"/>{t.date ? format(new Date(t.date),'MMMM dd, yyyy') : '-'}</div>
-                <div className="flex items-center text-gray-600"><FiClock className="mr-2 text-green-500"/>{t.startTime || '-'} - {t.endTime || '-'}</div>
-                <div className="flex items-center text-gray-600"><FiMapPin className="mr-2 text-red-500"/>{t.venue || '-'}</div>
-                <div className="flex items-center text-gray-600"><FiBook className="mr-2 text-blue-500"/><span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getYearColor(t.year)}`}>{t.year} - Semester {t.semester}</span></div>
-                <div className="flex items-center text-gray-600"><FiUsers className="mr-2 text-indigo-500"/>{t.department || '-'}</div>
+                <div className="flex items-center text-gray-600"><FiCalendar className="mr-2 text-purple-500" />{t.date ? format(new Date(t.date), 'MMMM dd, yyyy') : '-'}</div>
+                <div className="flex items-center text-gray-600"><FiClock className="mr-2 text-green-500" />{t.startTime || '-'} - {t.endTime || '-'}</div>
+                <div className="flex items-center text-gray-600"><FiMapPin className="mr-2 text-red-500" />{t.venue || '-'}</div>
+                <div className="flex items-center text-gray-600"><FiBook className="mr-2 text-blue-500" /><span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getYearColor(t.year)}`}>{t.year} - Semester {t.semester}</span></div>
+                <div className="flex items-center text-gray-600"><FiUsers className="mr-2 text-indigo-500" />{t.department || '-'}</div>
                 <div className="flex justify-end space-x-2 mt-3 pt-3 border-t">
-                  <button onClick={()=>openEditModal(t)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit"><FiEdit2 className="h-5 w-5"/></button>
-                  <button onClick={()=>handleDeleteTimetable(t._id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete"><FiTrash2 className="h-5 w-5"/></button>
+                  <button onClick={() => openEditModal(t)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit"><FiEdit2 className="h-5 w-5" /></button>
+                  <button onClick={() => handleDeleteTimetable(t._id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete"><FiTrash2 className="h-5 w-5" /></button>
                 </div>
               </div>
             </div>
@@ -274,42 +274,42 @@ const AdminTimetables = ({ sidebarOpen }) => {
         </div>
       ) : (
         <div className="text-center py-16 bg-white rounded-xl shadow-lg">
-          <FiCalendar className="h-16 w-16 text-gray-400 mx-auto mb-4"/>
+          <FiCalendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500 text-lg">No timetables found</p>
-          <button onClick={()=>setShowAddModal(true)} className="mt-4 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">Create Your First Schedule</button>
+          <button onClick={() => setShowAddModal(true)} className="mt-4 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">Create Your First Schedule</button>
         </div>
       )}
 
       {/* Add Modal */}
-      <Modal isOpen={showAddModal} onClose={()=>{setShowAddModal(false); resetForm();}} title="Add Exam Schedule" size="lg">
-        <TimetableForm 
-          formData={formData} 
-          handleInputChange={handleInputChange} 
+      <Modal isOpen={showAddModal} onClose={() => { setShowAddModal(false); resetForm(); }} title="Add Exam Schedule" size="lg">
+        <TimetableForm
+          formData={formData}
+          handleInputChange={handleInputChange}
           handleSubjectChange={handleSubjectChange}
-          handleSubmit={handleAddTimetable} 
-          subjects={subjects} 
+          handleSubmit={handleAddTimetable}
+          subjects={subjects}
           academicYears={academicYears}
-          semesters={semesters} 
-          examTypes={examTypes} 
+          semesters={semesters}
+          examTypes={examTypes}
           departments={departments}
-          submitText="Add Schedule" 
+          submitText="Add Schedule"
           resetForm={resetForm}
         />
       </Modal>
 
       {/* Edit Modal */}
-      <Modal isOpen={showEditModal} onClose={()=>{setShowEditModal(false); setSelectedTimetable(null); resetForm();}} title="Edit Exam Schedule" size="lg">
-        <TimetableForm 
-          formData={formData} 
-          handleInputChange={handleInputChange} 
+      <Modal isOpen={showEditModal} onClose={() => { setShowEditModal(false); setSelectedTimetable(null); resetForm(); }} title="Edit Exam Schedule" size="lg">
+        <TimetableForm
+          formData={formData}
+          handleInputChange={handleInputChange}
           handleSubjectChange={handleSubjectChange}
-          handleSubmit={handleEditTimetable} 
-          subjects={subjects} 
+          handleSubmit={handleEditTimetable}
+          subjects={subjects}
           academicYears={academicYears}
-          semesters={semesters} 
-          examTypes={examTypes} 
+          semesters={semesters}
+          examTypes={examTypes}
           departments={departments}
-          submitText="Update Schedule" 
+          submitText="Update Schedule"
           resetForm={resetForm}
         />
       </Modal>
@@ -325,51 +325,51 @@ const TimetableForm = ({ formData, handleInputChange, handleSubjectChange, handl
         <label className="block mb-1 font-medium">Subject</label>
         <select name="subject" value={formData.subject} onChange={handleSubjectChange} className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-purple-500">
           <option value="">Select Subject</option>
-          {subjects.map(s=><option key={s._id} value={s._id}>{s.name} ({s.code})</option>)}
+          {subjects.map(s => <option key={s._id} value={s._id}>{s.name} ({s.code})</option>)}
         </select>
       </div>
       <div>
         <label className="block mb-1 font-medium">Department</label>
         <select name="department" value={formData.department} onChange={handleInputChange} className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-purple-500" disabled={!!formData.subject}>
           <option value="">Select Department</option>
-          {departments.map(d=><option key={d} value={d}>{d}</option>)}
+          {departments.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
       </div>
       <div>
         <label className="block mb-1 font-medium">Year</label>
         <select name="year" value={formData.year} onChange={handleInputChange} className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-purple-500" disabled={!!formData.subject}>
           <option value="">Select Year</option>
-          {academicYears.map(y=><option key={y} value={y}>{y}</option>)}
+          {academicYears.map(y => <option key={y} value={y}>{y}</option>)}
         </select>
       </div>
       <div>
         <label className="block mb-1 font-medium">Semester</label>
         <select name="semester" value={formData.semester} onChange={handleInputChange} className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-purple-500" disabled={!!formData.subject}>
           <option value="">Select Semester</option>
-          {semesters.map(s=><option key={s} value={s}>{s}</option>)}
+          {semesters.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
       <div>
         <label className="block mb-1 font-medium">Exam Type</label>
         <select name="examType" value={formData.examType} onChange={handleInputChange} className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-purple-500">
-          {examTypes.map(e=><option key={e} value={e}>{e.charAt(0).toUpperCase()+e.slice(1)}</option>)}
+          {examTypes.map(e => <option key={e} value={e}>{e.charAt(0).toUpperCase() + e.slice(1)}</option>)}
         </select>
       </div>
       <div>
         <label className="block mb-1 font-medium">Venue</label>
-        <input type="text" name="venue" value={formData.venue} onChange={handleInputChange} className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-purple-500"/>
+        <input type="text" name="venue" value={formData.venue} onChange={handleInputChange} className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-purple-500" />
       </div>
       <div>
         <label className="block mb-1 font-medium">Date</label>
-        <input type="date" name="date" value={formData.date} onChange={handleInputChange} className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-purple-500"/>
+        <input type="date" name="date" value={formData.date} onChange={handleInputChange} className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-purple-500" />
       </div>
       <div>
         <label className="block mb-1 font-medium">Start Time</label>
-        <input type="time" name="startTime" value={formData.startTime} onChange={handleInputChange} className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-purple-500"/>
+        <input type="time" name="startTime" value={formData.startTime} onChange={handleInputChange} className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-purple-500" />
       </div>
       <div>
         <label className="block mb-1 font-medium">End Time</label>
-        <input type="time" name="endTime" value={formData.endTime} onChange={handleInputChange} className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-purple-500"/>
+        <input type="time" name="endTime" value={formData.endTime} onChange={handleInputChange} className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-purple-500" />
       </div>
     </div>
     <div className="flex justify-end space-x-2 mt-4">

@@ -29,7 +29,7 @@ import {
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
-const AdminUsers = ({ sidebarOpen }) => {
+const AdminUsers = () => {
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -89,7 +89,7 @@ const AdminUsers = ({ sidebarOpen }) => {
     { value: 'registrar', label: 'Registrar', icon: '📋', color: 'bg-indigo-100 text-indigo-800' }
   ];
   const genders = ['male', 'female', 'other'];
-  
+
 
   useEffect(() => {
     fetchUsers();
@@ -519,10 +519,7 @@ const AdminUsers = ({ sidebarOpen }) => {
   if (loading) return <Loader fullScreen />;
 
   return (
-    <div
-      className="container mx-auto px-4 py-8 transition-all duration-300"
-      style={{ marginLeft: sidebarOpen ? 208 : 64 }}
-    >
+    <div className="container mx-auto px-4 py-8 transition-all duration-300">
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl shadow-xl p-6 mb-8 text-white">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

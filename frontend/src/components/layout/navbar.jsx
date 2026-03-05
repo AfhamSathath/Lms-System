@@ -6,14 +6,11 @@ import { FiMenu, FiBell, FiUser, FiLogOut, FiChevronDown, FiHome } from 'react-i
 import Sidebar from './sidebar';
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, sidebarOpen, toggleSidebar } = useAuth();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef(null);
-
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   // Fetch unread notifications count
   useEffect(() => {

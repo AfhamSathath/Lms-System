@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import Loader from '../../components/common/loader';
 import Modal from '../../components/common/model';
-import { 
+import {
   FiBook, FiPlus, FiEdit2, FiTrash2, FiSearch, FiFilter, FiCalendar,
   FiGrid, FiUsers, FiAward, FiDownload, FiUpload, FiLayers, FiEye,
   FiCheckCircle, FiXCircle, FiAlertCircle, FiRefreshCw, FiChevronDown
@@ -223,7 +223,7 @@ const subjectOptions = {
   }
 };
 
-const AdminSubjects = ({ sidebarOpen }) => {
+const AdminSubjects = () => {
   const [subjects, setSubjects] = useState([]);
   const [groupedSubjects, setGroupedSubjects] = useState({});
   const [filteredSubjects, setFilteredSubjects] = useState([]);
@@ -282,7 +282,7 @@ const AdminSubjects = ({ sidebarOpen }) => {
     if (formData.year && formData.semester && formData.department) {
       const deptSubjects = subjectOptions[formData.department]?.[formData.year]?.[formData.semester] || [];
       setAvailableSubjects(deptSubjects);
-      
+
       // Reset name and code when year/semester/department changes
       if (!formData.name && !formData.code) {
         // Only reset if they're empty (not when editing)
@@ -301,7 +301,7 @@ const AdminSubjects = ({ sidebarOpen }) => {
         api.get('api/users?role=lecturer'),
         api.get('api/subjects/stats/by-year')
       ]);
-      
+
       setSubjects(subjectsRes.data.subjects);
       setFilteredSubjects(subjectsRes.data.subjects);
       setLecturers(lecturersRes.data.users);
@@ -328,7 +328,7 @@ const AdminSubjects = ({ sidebarOpen }) => {
   // Filter subjects
   const filterSubjects = () => {
     let filtered = subjects;
-    
+
     if (selectedYear !== 'all') {
       filtered = filtered.filter(s => s.year === selectedYear);
     }
@@ -356,9 +356,9 @@ const AdminSubjects = ({ sidebarOpen }) => {
     const { name, value, type, checked } = e.target;
     // unlock department if user manually changes it
     if (name === 'department') setDepartmentLocked(false);
-    setFormData({ 
-      ...formData, 
-      [name]: type === 'checkbox' ? checked : value 
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value
     });
   };
 
@@ -366,7 +366,7 @@ const AdminSubjects = ({ sidebarOpen }) => {
   const handleSubjectSelect = (e) => {
     const selectedCode = e.target.value;
     if (!selectedCode) return;
-    
+
     // Find the selected subject from available subjects
     const selected = availableSubjects.find(sub => sub.code === selectedCode);
     if (selected) {
@@ -489,10 +489,10 @@ const AdminSubjects = ({ sidebarOpen }) => {
   const handleBulkUpload = async (e) => {
     e.preventDefault();
     if (!bulkFile) return toast.error('Please select a CSV file');
-    
+
     const formData = new FormData();
     formData.append('file', bulkFile);
-    
+
     try {
       await api.post('api/subjects/bulk-upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -513,7 +513,7 @@ const AdminSubjects = ({ sidebarOpen }) => {
       "Programming Lab,CO1112,1,1st Year,1,Computer Science,Practical,false,,\n" +
       "Data Structures,CO1222,3,1st Year,2,Computer Science,Lecture,true,CO1212,\n" +
       "Data Structures Lab,CO1212,1,1st Year,2,Computer Science,Practical,false,,";
-    
+
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -548,7 +548,7 @@ const AdminSubjects = ({ sidebarOpen }) => {
   if (loading) return <Loader fullScreen />;
 
   return (
-    <div className="container mx-auto px-4 py-8 transition-all duration-300" style={{ marginLeft: sidebarOpen ? 208 : 64 }}>
+    <div className="container mx-auto px-4 py-8 transition-all duration-300">
 
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl shadow-xl p-6 mb-8 text-white flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -599,10 +599,10 @@ const AdminSubjects = ({ sidebarOpen }) => {
         {departments.map(dept => {
           const deptSubjects = subjects.filter(s => s.department === dept);
           const totalCredits = deptSubjects.reduce((sum, s) => sum + s.credits, 0);
-          
+
           return (
-            <div 
-              key={dept} 
+            <div
+              key={dept}
               className="bg-white rounded-xl shadow-lg p-6 cursor-pointer hover:shadow-xl transition-shadow"
               onClick={() => fetchSubjectsByDepartment(dept)}
             >
@@ -885,11 +885,11 @@ const AdminSubjects = ({ sidebarOpen }) => {
                   disabled={!formData.year || !formData.semester}
                 >
                   <option value="">
-                    {!formData.year || !formData.semester 
-                      ? 'Select year and semester first' 
-                      : availableSubjects.length === 0 
-                      ? 'No subjects available for this selection'
-                      : '-- Choose a subject from curriculum --'}
+                    {!formData.year || !formData.semester
+                      ? 'Select year and semester first'
+                      : availableSubjects.length === 0
+                        ? 'No subjects available for this selection'
+                        : '-- Choose a subject from curriculum --'}
                   </option>
                   {availableSubjects.map(sub => (
                     <option key={sub.code} value={sub.code}>
@@ -1424,15 +1424,15 @@ const AdminSubjects = ({ sidebarOpen }) => {
         <div className="p-6 max-h-[70vh] overflow-y-auto">
           <div className="grid grid-cols-1 gap-6">
             {academicYears.map(year => {
-              const yearStats = stats?.[year] || { 
-                totalSubjects: 0, 
-                semester1: 0, 
-                semester2: 0, 
+              const yearStats = stats?.[year] || {
+                totalSubjects: 0,
+                semester1: 0,
+                semester2: 0,
                 totalCredits: 0,
                 byDepartment: {},
                 byCategory: {}
               };
-              
+
               return (
                 <div key={year} className="border rounded-lg overflow-hidden">
                   <div className={`p-4 ${getYearColor(year)}`}>
@@ -1507,7 +1507,7 @@ const AdminSubjects = ({ sidebarOpen }) => {
                           <span>{((yearStats.semester1 / (yearStats.totalSubjects || 1)) * 100).toFixed(1)}%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
+                          <div
                             className="bg-blue-600 h-2 rounded-full"
                             style={{ width: `${(yearStats.semester1 / (yearStats.totalSubjects || 1)) * 100}%` }}
                           ></div>
@@ -1519,7 +1519,7 @@ const AdminSubjects = ({ sidebarOpen }) => {
                           <span>{((yearStats.semester2 / (yearStats.totalSubjects || 1)) * 100).toFixed(1)}%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
+                          <div
                             className="bg-green-600 h-2 rounded-full"
                             style={{ width: `${(yearStats.semester2 / (yearStats.totalSubjects || 1)) * 100}%` }}
                           ></div>

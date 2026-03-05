@@ -1,8 +1,20 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { AuthProvider } from './context/Authcontext';
+import { AuthProvider, useAuth } from './context/Authcontext';
 import PrivateRoute from './components/common/PrivateRoute';
+
+const LayoutWrapper = ({ children }) => {
+  const { sidebarOpen, user } = useAuth();
+
+  if (!user) return children;
+
+  return (
+    <div className={`transition-all duration-300 flex-1 ${sidebarOpen ? 'lg:ml-52' : 'lg:ml-16'}`}>
+      {children}
+    </div>
+  );
+};
 
 // Layout Components
 import Navbar from './components/layout/navbar';
@@ -57,10 +69,12 @@ function App() {
             <Route
               path="/*"
               element={
-                <>
+                <div className="flex flex-col min-h-screen">
                   <Navbar />
-                  <MainRoutes />
-                </>
+                  <LayoutWrapper>
+                    <MainRoutes />
+                  </LayoutWrapper>
+                </div>
               }
             />
           </Routes>
