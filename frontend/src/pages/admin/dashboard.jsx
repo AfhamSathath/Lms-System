@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/Authcontext';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
-import Loader from '../../components/common/Loader';
+import Loader from '../../components/common/loader';
 import {
   FiUsers, FiBook, FiFile, FiUserPlus,
   FiTrendingUp, FiPieChart,

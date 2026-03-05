@@ -30,6 +30,7 @@ import LecturerFiles from './pages/lecturer/files';
 import LecturerProfile from './pages/lecturer/profile';
 import LecturerTimetable from './pages/lecturer/timetable';
 import LecturerNotifications from './pages/lecturer/notifications';
+import LecurerSubjectMaterials from './pages/lecturer/subjectMaterials';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/dashboard';
@@ -40,10 +41,12 @@ import AdminTimetables from './pages/admin/timetable';
 import AdminFiles from './pages/admin/files';
 import AdminProfile from './pages/admin/Profile';
 import AdminNotifications from './pages/admin/notifications';
+import AdminLecturerManagement from './pages/admin/lecturerManagement';
+
 
 function App() {
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <div className="min-h-screen bg-gray-50">
           <Routes>
@@ -116,6 +119,7 @@ function MainRoutes() {
         <Route path="dashboard" element={<LecturerDashboard />} />
         <Route path="subjects" element={<LecturerSubjects />} />
         <Route path="files" element={<LecturerFiles />} />
+        <Route path="subjectMaterials" element={<LecurerSubjectMaterials />} />
         <Route path="timetable" element={<LecturerTimetable />} />
         <Route path="notifications" element={<LecturerNotifications />} />
         <Route path="profile" element={<LecturerProfile />} />
@@ -125,6 +129,7 @@ function MainRoutes() {
       <Route path="admin" element={<PrivateRoute role="admin" />}>
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="users" element={<AdminUsers />} />
+        <Route path="lecturers" element={<AdminLecturerManagement />} />
         <Route path="subjects" element={<AdminSubjects />} />
         <Route path="results" element={<AdminResults />} />
         <Route path="timetables" element={<AdminTimetables />} />

@@ -21,6 +21,9 @@ const adminRoutes = require('./routes/adminRoutes');
 const activityRoutes = require('./routes/activityRoutes');
 const userroutes = require('./routes/userroutes');
 const authRoutes = require('./routes/authroutes');
+const lecturerAssignmentRoutes = require('./routes/lecturerAssignmentRoutes');
+const subjectFileRoutes = require('./routes/subjectFileRoutes');
+const departmentRoutes = require('./routes/departmentRoutes');
 
 
 // Load environment variables
@@ -30,6 +33,27 @@ const app = express();
 
 // Connect to database
 require('./config/database')();
+
+// ================= CORS CONFIGURATION =================
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      process.env.FRONTEND_URL || 'http://localhost:5173',
+
+    ];
+
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 
 // ================= SECURITY MIDDLEWARE =================
 
@@ -59,27 +83,6 @@ app.use(mongoSanitize());
 
 // Compress responses
 app.use(compression());
-
-// ================= CORS CONFIGURATION =================
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      process.env.FRONTEND_URL || 'http://localhost:5173',
-
-    ];
-
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions));
 
 // ================= BODY PARSER =================
 app.use(express.json({ limit: '50mb' }));
@@ -228,6 +231,11 @@ app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/activities', activityRoutes);
+
+// Lecturer Management routes
+app.use('/api/lecturer-assignments', lecturerAssignmentRoutes);
+app.use('/api/subject-files', subjectFileRoutes);
+app.use('/api/departments', departmentRoutes);
 
 
 // ================= HEALTH CHECK =================

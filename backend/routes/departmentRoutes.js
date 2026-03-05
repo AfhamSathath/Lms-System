@@ -24,7 +24,7 @@ router.get('/stats', protect, authorize('admin'), async (req, res) => {
     const Department = require('../models/Department');
     const { User } = require('../models/user');
     const Course = require('../models/course');
-    const Enrollment = require('../models/Enrollment');
+    const Enrollment = require('../models/enrollment');
 
     const stats = await Department.aggregate([
       {

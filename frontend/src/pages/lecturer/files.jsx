@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/Authcontext';
 import api from '../../services/api';
+import Sidebar from '../../components/layout/sidebar';
 import Loader from '../../components/common/loader';
 import Modal from '../../components/common/model';
-import { FiFile, FiUpload, FiTrash2, FiDownload, FiBook } from 'react-icons/fi';
+import { FiFile, FiUpload, FiTrash2, FiDownload, FiBook, FiMenu, FiX } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 const LecturerFiles = () => {
@@ -14,6 +15,7 @@ const LecturerFiles = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [formData, setFormData] = useState({
     subjectId: '',
     semester: '',
@@ -31,10 +33,11 @@ const LecturerFiles = () => {
         api.get('/api/files'),
         api.get('/api/subjects')
       ]);
-      setFiles(filesRes.data.files);
-      setSubjects(subjectsRes.data.subjects);
+      setFiles(filesRes.data.files || []);
+      setSubjects(subjectsRes.data.subjects || []);
     } catch (error) {
       console.error('Error fetching data:', error);
+      toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -66,7 +69,7 @@ const LecturerFiles = () => {
 
     setUploading(true);
     try {
-      await api.post('/files/upload', uploadData, {
+      await api.post('/api/files/upload', uploadData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -90,7 +93,7 @@ const LecturerFiles = () => {
   const handleDelete = async (fileId) => {
     if (window.confirm('Are you sure you want to delete this file?')) {
       try {
-        await api.delete(`/files/${fileId}`);
+        await api.delete(`/api/files/${fileId}`);
         toast.success('File deleted successfully');
         fetchData();
       } catch (error) {
@@ -138,23 +141,37 @@ const LecturerFiles = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">My Files</h1>
-          <p className="text-gray-600 mt-2">Manage your uploaded study materials</p>
-        </div>
-        <button
-          onClick={() => setShowUploadModal(true)}
-          className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center"
-        >
-          <FiUpload className="mr-2" />
-          Upload New File
-        </button>
-      </div>
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar */}
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
-      {/* Files List */}
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto transition-all duration-300" style={{ marginLeft: sidebarOpen ? 208 : 64 }}>
+        <div className="container mx-auto px-4 py-8">
+          {/* Top Bar */}
+          <div className="flex items-center justify-between mb-8 lg:hidden">
+            <h1 className="text-2xl font-bold text-gray-800">My Materials</h1>
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-200 rounded-lg">
+              <FiMenu className="h-6 w-6" />
+            </button>
+          </div>
+
+          {/* Header */}
+          <div className="flex justify-between items-center mb-8 flex-col md:flex-row md:items-end gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800">My Teaching Materials</h1>
+              <p className="text-gray-600 mt-2">Upload and manage learning resources for your subjects</p>
+            </div>
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center font-medium shadow-lg"
+            >
+              <FiUpload className="mr-2" />
+              Upload New File
+            </button>
+          </div>
+
+          {/* Files List */}
       {files.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {files.map(file => (
@@ -334,6 +351,8 @@ const LecturerFiles = () => {
           </div>
         </form>
       </Modal>
+        </div>
+      </main>
     </div>
   );
 };

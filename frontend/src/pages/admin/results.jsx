@@ -616,7 +616,12 @@ const AdminResults = ({ sidebarOpen }) => {
   const handleAddResult = async (e) => {
     e.preventDefault();
     try {
-      await api.post('api/results', formData);
+      const submitData = {
+        ...formData,
+        semester: parseInt(formData.semester),
+        marks: parseInt(formData.marks)
+      };
+      await api.post('api/results', submitData);
       toast.success('Result added successfully');
       setShowAddModal(false);
       resetForm();
@@ -630,7 +635,12 @@ const AdminResults = ({ sidebarOpen }) => {
     e.preventDefault();
     if (!selectedResult) return;
     try {
-      await api.put(`api/results/${selectedResult._id}`, formData);
+      const submitData = {
+        ...formData,
+        semester: parseInt(formData.semester),
+        marks: parseInt(formData.marks)
+      };
+      await api.put(`api/results/${selectedResult._id}`, submitData);
       toast.success('Result updated successfully');
       setShowEditModal(false);
       setSelectedResult(null);

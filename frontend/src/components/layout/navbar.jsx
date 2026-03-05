@@ -20,8 +20,27 @@ const Navbar = () => {
     if (!user) return;
 
     let mounted = true;
-   
 
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await api.get('/api/notifications/unread-count');
+        if (mounted) {
+          setUnreadCount(res.data.count);
+        }
+      } catch (error) {
+        console.error('Failed to fetch unread count:', error);
+      }
+    };
+
+    fetchUnreadCount();
+
+    // Set up polling every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, [user]);
 
   const handleLogout = async () => {

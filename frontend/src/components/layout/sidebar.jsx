@@ -36,6 +36,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         return [...common,
           { name: 'My Subjects', path: 'subjects', icon: FiBook },
           { name: 'Upload Materials', path: 'files', icon: FiUpload },
+          { name: 'Subject Materials', path: 'subjectMaterials', icon: FiFile },
           { name: 'Exam Schedule', path: 'timetable', icon: FiCalendar },
           { name: 'Student Results', path: 'results', icon: FiBarChart2 },
           { name: 'Notifications', path: 'notifications', icon: FiBell },
@@ -44,6 +45,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       case 'admin':
         return [...common,
           { name: 'User Management', path: 'users', icon: FiUsers },
+          { name: 'Lecturer Management', path: 'lecturers', icon: FiUsers },
           { name: 'Subject Management', path: 'subjects', icon: FiBook },
           { name: 'Result Management', path: 'results', icon: FiAward },
           { name: 'Timetable Management', path: 'timetables', icon: FiCalendar },
@@ -130,6 +132,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             )}
           </div>
         </div>
+
+
 
         {/* Navigation items */}
         <nav className="flex-1 overflow-y-auto py-2">

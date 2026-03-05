@@ -544,7 +544,7 @@ exports.getDepartmentStats = async (req, res, next) => {
     const courseIds = courses.map(c => c._id);
     
     if (courseIds.length > 0) {
-      const Enrollment = require('../models/Enrollment');
+      const Enrollment = require('../models/enrollment');
       const enrollments = await Enrollment.countDocuments({
         course: { $in: courseIds },
         enrollmentStatus: { $in: ['enrolled', 'completed'] }

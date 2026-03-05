@@ -263,6 +263,7 @@ const AdminSubjects = ({ sidebarOpen }) => {
     lecturer: '',
     description: '',
   });
+  const [departmentLocked, setDepartmentLocked] = useState(false);
 
   const academicYears = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
   const semesters = [1, 2];
@@ -353,6 +354,8 @@ const AdminSubjects = ({ sidebarOpen }) => {
 
   const handleInputChange = e => {
     const { name, value, type, checked } = e.target;
+    // unlock department if user manually changes it
+    if (name === 'department') setDepartmentLocked(false);
     setFormData({ 
       ...formData, 
       [name]: type === 'checkbox' ? checked : value 
@@ -375,7 +378,11 @@ const AdminSubjects = ({ sidebarOpen }) => {
         category: selected.category,
         hasPractical: selected.hasPractical || false,
         practicalCode: selected.practicalCode || '',
+        // ensure department reflects the current filter (should already match)
+        department: formData.department,
       });
+      // lock department field once a subject is chosen
+      setDepartmentLocked(true);
     }
   };
 
@@ -393,13 +400,19 @@ const AdminSubjects = ({ sidebarOpen }) => {
       lecturer: '',
       description: '',
     });
+    setDepartmentLocked(false);
   };
 
   // Add subject
   const handleAddSubject = async e => {
     e.preventDefault();
     try {
-      await api.post('api/subjects', formData);
+      const submitData = {
+        ...formData,
+        credits: parseInt(formData.credits),
+        semester: parseInt(formData.semester)
+      };
+      await api.post('api/subjects', submitData);
       toast.success('Subject added successfully');
       setShowAddModal(false);
       resetForm();
@@ -432,7 +445,12 @@ const AdminSubjects = ({ sidebarOpen }) => {
   const handleEditSubject = async e => {
     e.preventDefault();
     try {
-      await api.put(`api/subjects/${selectedSubject._id}`, formData);
+      const submitData = {
+        ...formData,
+        credits: parseInt(formData.credits),
+        semester: parseInt(formData.semester)
+      };
+      await api.put(`api/subjects/${selectedSubject._id}`, submitData);
       toast.success('Subject updated successfully');
       setShowEditModal(false);
       setSelectedSubject(null);

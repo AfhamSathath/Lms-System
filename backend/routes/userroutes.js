@@ -48,6 +48,7 @@ router.delete('/:id', userController.deleteUser);
 router.put('/:id', userController.updateUser);
 router.put('/:id/admin-reset-password', userController.adminResetPassword);
 router.put('/:id/update-profile', protect, userController.updateProfile);
+router.put('/profile', protect, userController.updateProfile);
 router.put('/:id/update-password', protect, userController.updatePassword);
 router.put('/:id/toggle-status', userController.toggleUserStatus);
 router.post('/:id/reset-password', userController.resetPassword);
