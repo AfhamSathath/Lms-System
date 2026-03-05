@@ -67,7 +67,7 @@ const LecturerManagement = ({ sidebarOpen }) => {
       ]);
 
       setState({
-        assignments: assignRes.data.assignments || [],
+        assignments: assignRes.data.data || [],
         lecturers: lecturersRes.data.users || [],
         subjects: subjectsRes.data.subjects || [],
         departments: deptRes.data.departments || []
@@ -88,7 +88,7 @@ const LecturerManagement = ({ sidebarOpen }) => {
         a.subject?.name?.toLowerCase().includes(searchTerm);
 
       const matchesFilters =
-        (filters.department === 'all' || a.department?._id === filters.department) &&
+        (filters.department === 'all' || a.department === filters.department || a.department === state.departments.find(d => d._id === filters.department)?.name) &&
         (filters.semester === 'all' || a.semester === Number(filters.semester)) &&
         (filters.academicYear === 'all' || a.academicYear === filters.academicYear) &&
         (filters.status === 'all' || a.status === filters.status);
@@ -133,8 +133,8 @@ const LecturerManagement = ({ sidebarOpen }) => {
           recipientIds: [formData.lecturerId],
           title: 'New Subject Assignment',
           message: `You have been assigned to teach ${selectedSubject.name} (${selectedSubject.code}) for ${formData.academicYear}, Semester ${formData.semester}`,
-          type: 'assignment',
-          priority: 'normal',
+          type: 'ASSIGNMENT',
+          priority: 'NORMAL',
           link: '/lecturer/dashboard'
         });
       }
@@ -483,9 +483,9 @@ const AssignModal = ({ isOpen, onClose, formData, setFormData, onSubmit, lecture
                     ))}
                     {departments.filter(d => ALLOWED_DEPARTMENTS.includes(d.name)).length === 0 && (
                       <>
-                        <option value="cs">Computer Science</option>
-                        <option value="se">Software Engineering</option>
-                        <option value="it">Information Technology</option>
+                        <option value="Computer Science">Computer Science</option>
+                        <option value="Software Engineering">Software Engineering</option>
+                        <option value="Information Technology">Information Technology</option>
                       </>
                     )}
                   </>

@@ -30,13 +30,15 @@ const notificationSchema = new mongoose.Schema(
         'TIMETABLE_UPDATED',
         'SYSTEM_ALERT',
         'GENERAL',
+        'ASSIGNMENT',
+        'assignment'
       ],
       default: 'GENERAL',
     },
 
     priority: {
       type: String,
-      enum: ['LOW', 'MEDIUM', 'HIGH'],
+      enum: ['LOW', 'MEDIUM', 'HIGH', 'NORMAL', 'normal'],
       default: 'MEDIUM',
     },
 

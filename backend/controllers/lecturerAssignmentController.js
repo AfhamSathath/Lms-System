@@ -12,39 +12,60 @@ const mongoose = require('mongoose');
 
 exports.assignLecturerToSubject = async (req, res) => {
   try {
+    console.log('Assign Lecturer Request Body:', req.body);
     const { lecturerId, departmentId, subjectId } = req.body;
 
     // Validate required fields
     if (!lecturerId || !departmentId || !subjectId) {
-      return res.status(400).json({ error: 'All fields are required' });
+      console.log('Missing fields:', { lecturerId, departmentId, subjectId });
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required',
+        received: { lecturerId, departmentId, subjectId }
+      });
     }
 
     // Check if Lecturer exists
     const lecturer = await User.findById(lecturerId);
     if (!lecturer) {
       console.log('Lecturer not found for ID:', lecturerId);
-      return res.status(404).json({ error: `Lecturer with ID ${lecturerId} not found` });
+      return res.status(404).json({
+        success: false,
+        message: `Lecturer with ID ${lecturerId} not found`
+      });
     }
 
     // Check if Subject exists
     const subject = await Subject.findById(subjectId);
     if (!subject) {
       console.log('Subject not found for ID:', subjectId);
-      return res.status(404).json({ error: `Subject with ID ${subjectId} not found` });
+      return res.status(404).json({
+        success: false,
+        message: `Subject with ID ${subjectId} not found`
+      });
     }
 
     // Use department string directly
     const departmentName = departmentId;
+    const academicYear = subject.year || req.body.academicYear;
+    const semester = subject.semester || Number(req.body.semester);
 
-    // Check if this assignment already exists
+    // Check if this specific assignment already exists
     const existing = await LecturerAssignment.findOne({
       lecturer: lecturer._id,
       subject: subject._id,
-      department: departmentName
+      department: departmentName,
+      academicYear: academicYear,
+      semester: semester,
+      isActive: true
     });
 
     if (existing) {
-      return res.status(400).json({ error: 'Lecturer is already assigned to this subject in this department' });
+      console.log('Existing assignment found:', existing._id);
+      return res.status(400).json({
+        success: false,
+        message: `Lecturer is already assigned to this subject in this department for ${academicYear}, Semester ${semester}`
+      });
     }
 
     // Create new assignment
@@ -52,21 +73,33 @@ exports.assignLecturerToSubject = async (req, res) => {
       lecturer: lecturer._id,
       subject: subject._id,
       department: departmentName,
-      academicYear: subject.year, // Auto-fill from subject
-      semester: subject.semester, // Auto-fill from subject
+      academicYear: academicYear,
+      semester: semester,
       startDate: req.body.startDate,
       endDate: req.body.endDate,
-      curriculum: req.body.curriculum,
+      curriculum: {
+        totalLectures: Number(req.body.curriculum?.totalLectures || 30),
+        totalPracticals: Number(req.body.curriculum?.totalPracticals || 0),
+        totalAssignments: Number(req.body.curriculum?.totalAssignments || 0)
+      },
       qualifications: req.body.qualifications,
       notes: req.body.notes
     });
 
     await newAssignment.save();
 
-    res.status(201).json({ message: 'Lecturer assigned successfully', assignment: newAssignment });
+    console.log('Assignment created successfully:', newAssignment._id);
+    res.status(201).json({
+      success: true,
+      message: 'Lecturer assigned successfully',
+      assignment: newAssignment
+    });
   } catch (err) {
     console.error('Error assigning lecturer:', err);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({
+      success: false,
+      message: err.message || 'Server error'
+    });
   }
 };
 
