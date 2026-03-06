@@ -38,22 +38,22 @@ const StudentDashboard = () => {
   const fetchDashboardData = async () => {
     if (!user?._id) return;
     try {
-      const [subjectsRes, resultsRes, filesRes, timetablesRes, notificationsRes, unreadRes] = await Promise.all([
-        api.get('/subjects'),
-        api.get(`/results/student/${user._id}`),
-        api.get('/files'),
-        api.get('/timetables/upcoming'),
-        api.get('/notifications'),
-        api.get('/notifications/unread-count')
+      const [subjectsRes, resultsRes, filesRes, timetablesRes, notificationsRes, unreadRes] = await Promise.allSettled([
+        api.get('/api/subjects'),
+        api.get(`/api/results/student/${user._id}`),
+        api.get('/api/files'),
+        api.get('/api/timetables/upcoming'),
+        api.get('/api/notifications'),
+        api.get('/api/notifications/unread-count')
       ]);
 
       setStats({
-        subjects: subjectsRes.data.subjects,
-        results: resultsRes.data.results,
-        files: filesRes.data.files.slice(0, 5),
-        timetables: timetablesRes.data.timetables,
-        notifications: notificationsRes.data.notifications.slice(0, 5),
-        unreadCount: unreadRes.data.count,
+        subjects: subjectsRes.status === 'fulfilled' ? subjectsRes.value.data.subjects || [] : [],
+        results: resultsRes.status === 'fulfilled' ? resultsRes.value.data.results || {} : {},
+        files: filesRes.status === 'fulfilled' ? (filesRes.value.data.files || []).slice(0, 5) : [],
+        timetables: timetablesRes.status === 'fulfilled' ? timetablesRes.value.data.timetables || [] : [],
+        notifications: notificationsRes.status === 'fulfilled' ? (notificationsRes.value.data.notifications || []).slice(0, 5) : [],
+        unreadCount: unreadRes.status === 'fulfilled' ? unreadRes.value.data.count || 0 : 0,
       });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);

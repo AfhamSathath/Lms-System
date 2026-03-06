@@ -3,7 +3,7 @@ import { useAuth } from '../../context/Authcontext';
 import api from '../../services/api';
 import Loader from '../../components/common/loader';
 import Modal from '../../components/common/model';
-import { FiBook, FiUsers, FiEdit2, FiTrash2, FiPlus } from 'react-icons/fi';
+import { FiBook, FiUsers, FiEdit2, FiTrash2, FiPlus, FiCalendar } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 const LecturerSubjects = () => {
@@ -120,6 +120,12 @@ const LecturerSubjects = () => {
                   <FiUsers className="mr-2 text-blue-500" />
                   <span>Semester: {subject.semester}</span>
                 </div>
+                {subject.year && (
+                  <div className="flex items-center text-gray-600">
+                    <FiCalendar className="mr-2 text-purple-500" />
+                    <span>Year: {subject.year}</span>
+                  </div>
+                )}
                 {subject.description && (
                   <p className="text-sm text-gray-500 mt-2">{subject.description}</p>
                 )}

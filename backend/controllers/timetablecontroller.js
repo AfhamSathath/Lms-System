@@ -2,6 +2,28 @@ const Timetable = require('../models/timetable');
 const Subject = require('../models/course');
 
 
+// @desc    Get upcoming timetables (date >= today)
+// @route   GET /api/timetables/upcoming
+// @access  Private
+exports.getUpcomingTimetables = async (req, res, next) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+
+    const timetables = await Timetable.find({ date: { $gte: today } })
+      .populate('subject', 'name code year semester')
+      .sort({ date: 1, startTime: 1 });
+
+    res.json({
+      success: true,
+      count: timetables.length,
+      timetables
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Get all timetables
 // @route   GET /api/timetables
 // @access  Private

@@ -11,7 +11,7 @@ const LecturerTimetable = () => {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const res = await api.get('/timetables/upcoming');
+        const res = await api.get('api/timetables/upcoming');
         setTimetables(res.data.timetables);
       } catch (err) {
         console.error(err);

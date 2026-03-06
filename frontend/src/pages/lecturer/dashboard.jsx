@@ -10,7 +10,8 @@ import {
   FiCalendar,
   FiTrendingUp,
   FiUpload,
-  FiChevronRight
+  FiChevronRight,
+  FiLayers
 } from 'react-icons/fi';
 
 const LecturerDashboard = () => {
@@ -153,9 +154,23 @@ const LecturerDashboard = () => {
               <div key={subject._id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                 <h3 className="font-semibold text-gray-800">{subject.name}</h3>
                 <p className="text-sm text-gray-500 mt-1">{subject.code}</p>
-                <div className="flex items-center mt-3 text-sm text-gray-600">
-                  <FiUsers className="mr-2" />
-                  <span>Semester {subject.semester}</span>
+                <div className="mt-3 space-y-1.5">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <FiLayers className="mr-2 text-green-500" />
+                    <span>Semester {subject.semester}</span>
+                  </div>
+                  {subject.year && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <FiCalendar className="mr-2 text-purple-500" />
+                      <span>{subject.year}</span>
+                    </div>
+                  )}
+                  {subject.department && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <FiUsers className="mr-2 text-blue-500" />
+                      <span className="truncate">{subject.department?.name || subject.department}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

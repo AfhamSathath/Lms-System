@@ -10,6 +10,9 @@ router.route('/')
   .get(protect, timetableController.getAllTimetables)
   .post(protect, timetableController.createTimetable);
 
+// Named routes MUST come before /:id to avoid 'upcoming' being cast as ObjectId
+router.get('/upcoming', protect, timetableController.getUpcomingTimetables);
+
 router.route('/:id')
   .get(protect, timetableController.getTimetable)
   .put(protect, timetableController.updateTimetable)
