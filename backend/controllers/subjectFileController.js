@@ -12,11 +12,39 @@ exports.getAllFiles = async (req, res, next) => {
   try {
     const { semester, academicYear, fileType, limit = 100 } = req.query;
 
+    // Start with the common filters
     let query = { isActive: true, isPublished: true };
 
     if (semester && semester !== 'all') query.semester = Number(semester);
     if (academicYear && academicYear !== 'all') query.academicYear = academicYear;
     if (fileType && fileType !== 'all') query.fileType = fileType;
+
+    // Lecturers should only see files for subjects they are assigned to
+    // and within those subjects only their own uploads plus any uploaded by admins
+    if (req.user && req.user.role === 'lecturer') {
+      // fetch assignments for the lecturer
+      const LecturerAssignment = require('./../models/LecturerAssignment');
+      const assignments = await LecturerAssignment.find({ lecturer: req.user.id, isActive: true }).select('subject');
+      const subjectIds = assignments.map(a => a.subject.toString());
+
+      // if the lecturer has no assignments we can make the query impossible so they get empty array
+      if (subjectIds.length === 0) {
+        return res.json({ success: true, count: 0, files: [] });
+      }
+
+      query.subject = { $in: subjectIds };
+
+      // determine admin user ids so we can allow their uploads as well
+      const User = require('./../models/user');
+      const admins = await User.find({ role: 'admin' }).select('_id');
+      const adminIds = admins.map(u => u._id);
+
+      // restrict uploadedBy to self or any admin
+      query.$or = [
+        { uploadedBy: req.user.id },
+        { uploadedBy: { $in: adminIds } }
+      ];
+    }
 
     const files = await SubjectFile.find(query)
       .populate('subject', 'name code')

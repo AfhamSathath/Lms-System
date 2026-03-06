@@ -31,7 +31,8 @@ const upload = multer({
 router.use(protect);
 
 // ================= STUDENT ROUTES =================
-router.get('/student/:id', protect, getStudentResults);
+// note: use studentId parameter so controller can pick it up consistently
+router.get('/student/:studentId', protect, getStudentResults);
 router.get('/transcript/:studentId', getTranscript);
 
 // ================= ADMIN STATISTICS ROUTES =================

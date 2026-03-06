@@ -37,7 +37,7 @@ const Login = () => {
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center h-20 w-20 rounded-full bg-white bg-opacity-20 backdrop-blur-lg mb-4">
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 rounded-full">
-              <FiMail className="h-8 w-8 text-white" />
+              <img src="/esn.webp" alt="Logo" className="h-200 w-200" />
             </div>
           </div>
           <h2 className="text-4xl font-extrabold text-white mb-2">

@@ -48,10 +48,10 @@ const Landing = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
               <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-lg">
-                <FiBook className="h-6 w-6 text-white" />
+                <img src="/esn.webp" alt="Logo" className="h-8 w-8" />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                University LMS
+               Trincomalee Campus , Eastern University Sri Lanka
               </span>
             </div>
             <div className="flex items-center space-x-4">
@@ -170,9 +170,9 @@ const Landing = () => {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-lg">
-                  <FiBook className="h-5 w-5 text-white" />
+                  <img src="/esn.webp" alt="Logo" className="h-6 w-10" />
                 </div>
-                <span className="font-bold text-white">University LMS</span>
+                <span className="font-bold text-white"> Trincomalee Campus , Eastern University Sri Lanka</span>
               </div>
               <p className="text-sm text-gray-400">
                 Empowering education through technology.
@@ -191,7 +191,7 @@ const Landing = () => {
               <div className="space-y-2 text-sm">
                 <p className="flex items-center">
                   <FiMail className="mr-2 h-4 w-4" />
-                  support@universitylms.com
+                  support@tclms.com
                 </p>
               </div>
             </div>
@@ -200,7 +200,7 @@ const Landing = () => {
           <div className="border-t border-gray-700 pt-8">
             <div className="flex flex-col md:flex-row justify-between items-center">
               <p className="text-sm text-gray-400">
-                © 2026 University LMS. All rights reserved.
+                © 2026 Trincomalee Campus , Eastern University Sri Lanka. All rights reserved.
               </p>
               <div className="flex space-x-6 mt-4 md:mt-0">
                 <a href="#" className="text-gray-400 hover:text-white transition-colors">

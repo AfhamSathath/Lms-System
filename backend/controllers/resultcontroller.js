@@ -32,7 +32,12 @@ exports.getResults = async (req, res, next) => {
  */
 exports.getStudentResults = async (req, res, next) => {
   try {
-    const results = await Result.find({ student: req.params.studentId })
+    // route defines /student/:id so use req.params.id
+    const studentId = req.params.studentId || req.params.id;
+    if (!studentId) {
+      return res.status(400).json({ success: false, message: 'Student ID is required' });
+    }
+    const results = await Result.find({ student: studentId })
       .populate('subject', 'name code credits')
       .sort({ year: 1, semester: 1 });
 

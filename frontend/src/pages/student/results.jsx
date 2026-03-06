@@ -29,19 +29,38 @@ const StudentResults = () => {
     return map[num] || num;
   };
 
+  const [error, setError] = useState(null);
+
   const fetchResults = async () => {
     // make sure we use the id field that is always populated by auth
     const studentId = user?.id || user?._id;
+    console.log('fetchResults invoked, user:', user, 'studentId:', studentId);
     if (!studentId) {
+      setError('Unable to determine your student ID.');
       setLoading(false);
       return;
     }
 
     try {
       const response = await api.get(`/api/results/student/${studentId}`);
-      const allResults = (response?.data?.results && typeof response.data.results === 'object')
-        ? response.data.results
-        : {};
+      if (!response.data || !response.data.success) {
+        console.warn('unexpected API response', response);
+      }
+
+      // normalize results to plain object in case server returns an array
+      let allResults = {};
+      if (response?.data?.results) {
+        if (Array.isArray(response.data.results)) {
+          // convert array of sem objects into keyed object
+          response.data.results.forEach(semObj => {
+            if (semObj.year && semObj.semester != null) {
+              allResults[`${semObj.year}-S${semObj.semester}`] = semObj;
+            }
+          });
+        } else if (typeof response.data.results === 'object') {
+          allResults = response.data.results;
+        }
+      }
       console.log('raw results from API', allResults);
 
       // attempt to filter to only the student's current year/semester
@@ -53,7 +72,7 @@ const StudentResults = () => {
 
       if (assignedYear && sem != null) {
         assignedKey = `${assignedYear}-S${sem}`;
-        if (allResults[assignedKey]) {
+        if (allResults && allResults[assignedKey]) {
           filteredResults = { [assignedKey]: allResults[assignedKey] };
           setExpandedSemesters({ [assignedKey]: true });
         } else {
@@ -64,9 +83,10 @@ const StudentResults = () => {
         filteredResults = allResults;
       }
 
-      setResults(filteredResults);
+      setResults(filteredResults || {});
     } catch (error) {
       console.error('Error fetching results:', error);
+      setError('Failed to load your results.');
     } finally {
       setLoading(false);
     }
@@ -129,7 +149,7 @@ const StudentResults = () => {
   }
 
   const poorGradeSubjects = getPoorGradeSubjects();
-  const hasResults = Object.keys(results).length > 0;
+  const hasResults = results && Object.keys(results).length > 0;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -138,6 +158,13 @@ const StudentResults = () => {
         <h1 className="text-3xl font-bold text-gray-800">My Results</h1>
         <p className="text-gray-600 mt-2">View your academic performance across all semesters</p>
       </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 mb-8">
+          <p className="text-red-700 font-medium">{error}</p>
+        </div>
+      )}
 
       {/* CGPA Card */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl shadow-xl p-6 mb-8 text-white">

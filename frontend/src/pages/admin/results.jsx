@@ -91,9 +91,9 @@ const AdminResults = () => {
   const fetchData = async () => {
     try {
       const [resultsRes, studentsRes, subjectsRes] = await Promise.all([
-        api.get('api/results'),
-        api.get('api/users?role=student'),
-        api.get('api/subjects')
+        api.get('/api/results'),
+        api.get('/api/users?role=student'),
+        api.get('/api/subjects')
       ]);
 
       // Ensure results have proper structure
@@ -621,13 +621,16 @@ const AdminResults = () => {
         semester: parseInt(formData.semester),
         marks: parseInt(formData.marks)
       };
-      await api.post('api/results', submitData);
+      // ensure the URL begins with a slash so axios merges with baseURL correctly
+      const res = await api.post('/api/results', submitData);
       toast.success('Result added successfully');
       setShowAddModal(false);
       resetForm();
       fetchData();
     } catch (error) {
-      toast.error('Failed to add result');
+      console.error('Add result error', error);
+      const msg = error.response?.data?.message || error.message || 'Failed to add result';
+      toast.error(msg);
     }
   };
 
@@ -640,14 +643,16 @@ const AdminResults = () => {
         semester: parseInt(formData.semester),
         marks: parseInt(formData.marks)
       };
-      await api.put(`api/results/${selectedResult._id}`, submitData);
+      await api.put(`/api/results/${selectedResult._id}`, submitData);
       toast.success('Result updated successfully');
       setShowEditModal(false);
       setSelectedResult(null);
       resetForm();
       fetchData();
     } catch (error) {
-      toast.error('Failed to update result');
+      console.error('Edit result error', error);
+      const msg = error.response?.data?.message || 'Failed to update result';
+      toast.error(msg);
     }
   };
 
