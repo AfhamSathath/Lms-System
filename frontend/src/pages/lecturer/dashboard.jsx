@@ -22,6 +22,7 @@ const LecturerDashboard = () => {
     files: [],
     students: [],
     upcomingExams: [],
+    assignments: []
   });
 
   useEffect(() => {
@@ -30,14 +31,17 @@ const LecturerDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const [subjectsRes, filesRes] = await Promise.all([
+      const lecturerId = user?.id || user?._id;
+      const [subjectsRes, filesRes, assignmentsRes] = await Promise.all([
         api.get('/api/subjects'),
-        api.get('/api/files')
+        api.get('/api/files'),
+        api.get(`/api/lecturer-assignments/lecturer/${lecturerId}`)
       ]);
 
       setStats({
         subjects: subjectsRes.data.subjects,
         files: filesRes.data.files,
+        assignments: assignmentsRes.data.data || []
       });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -107,6 +111,21 @@ const LecturerDashboard = () => {
             </div>
             <Link to="/lecturer/files" className="mt-4 text-sm text-green-600 hover:text-green-800 font-medium flex items-center">
               View <FiChevronRight className="w-4 h-4 ml-1" />
+            </Link>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+            <div className="flex items-center">
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <FiTrendingUp className="h-8 w-8 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm text-gray-500">Update Progress</p>
+                <p className="text-2xl font-bold text-gray-800">{stats.assignments.length}</p>
+              </div>
+            </div>
+            <Link to="/lecturer/progress" className="mt-4 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center">
+              Go <FiChevronRight className="w-4 h-4 ml-1" />
             </Link>
           </div>
 

@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/Authcontext';
 import {
   FiHome, FiBook, FiAward, FiFile, FiUser, FiUsers, FiCalendar, FiSettings, FiLogOut,
-  FiChevronLeft, FiChevronRight, FiBell, FiUpload, FiBarChart2, FiStar
+  FiChevronLeft, FiChevronRight, FiBell, FiUpload, FiBarChart2, FiStar, FiTrendingUp
 } from 'react-icons/fi';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
@@ -37,6 +37,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         { name: 'My Subjects', path: 'subjects', icon: FiBook },
         { name: 'Upload Materials', path: 'files', icon: FiUpload },
         { name: 'Subject Materials', path: 'subjectMaterials', icon: FiFile },
+        { name: 'Progress', path: 'progress', icon: FiTrendingUp },
         { name: 'Exam Schedule', path: 'timetable', icon: FiCalendar },
         { name: 'Student Results', path: 'results', icon: FiBarChart2 },
         { name: 'Notifications', path: 'notifications', icon: FiBell },

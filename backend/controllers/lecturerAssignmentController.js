@@ -111,6 +111,11 @@ exports.getLecturerSubjects = async (req, res, next) => {
     const { lecturerId } = req.params;
     const { semester, academicYear } = req.query;
 
+    // ensure lecturer only sees their own data unless admin
+    if (req.user.role !== 'admin' && req.user.id !== lecturerId && req.user._id.toString() !== lecturerId) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
     // Build filter
     const filter = {
       lecturer: lecturerId,
@@ -204,6 +209,11 @@ exports.updateAssignmentProgress = async (req, res, next) => {
         success: false,
         message: 'Assignment not found'
       });
+    }
+
+    // ensure only the assigned lecturer or admin can update
+    if (req.user.role !== 'admin' && assignment.lecturer.toString() !== req.user.id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized to update this assignment' });
     }
 
     // Update curriculum progress

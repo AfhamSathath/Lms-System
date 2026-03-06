@@ -43,6 +43,7 @@ import LecturerProfile from './pages/lecturer/profile';
 import LecturerTimetable from './pages/lecturer/timetable';
 import LecturerNotifications from './pages/lecturer/notifications';
 import LecurerSubjectMaterials from './pages/lecturer/subjectMaterials';
+import LecturerProgress from './pages/lecturer/progress';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/dashboard';
@@ -134,6 +135,7 @@ function MainRoutes() {
         <Route path="subjects" element={<LecturerSubjects />} />
         <Route path="files" element={<LecturerFiles />} />
         <Route path="subjectMaterials" element={<LecurerSubjectMaterials />} />
+        <Route path="progress" element={<LecturerProgress />} />
         <Route path="timetable" element={<LecturerTimetable />} />
         <Route path="notifications" element={<LecturerNotifications />} />
         <Route path="profile" element={<LecturerProfile />} />
