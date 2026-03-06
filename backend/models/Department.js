@@ -29,7 +29,7 @@ const departmentSchema = new mongoose.Schema({
   hodStartDate: {
     type: Date,
     validate: {
-      validator: function(value) {
+      validator: function (value) {
         // If hodEndDate exists, hodStartDate should be before it
         if (this.hodEndDate && value >= this.hodEndDate) {
           return false;
@@ -42,7 +42,7 @@ const departmentSchema = new mongoose.Schema({
   hodEndDate: {
     type: Date,
     validate: {
-      validator: function(value) {
+      validator: function (value) {
         // If hodStartDate exists, hodEndDate should be after it
         if (this.hodStartDate && value <= this.hodStartDate) {
           return false;
@@ -57,14 +57,14 @@ const departmentSchema = new mongoose.Schema({
     lowercase: true,
     trim: true,
     match: [
-      /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 
+      /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
       'Please enter a valid email'
     ]
   },
   contactPhone: {
     type: String,
     match: [
-      /^[0-9]{10}$|^[0-9]{3}-[0-9]{3}-[0-9]{4}$|^\+[0-9]{1,3}[0-9]{10}$/, 
+      /^[0-9]{10}$|^[0-9]{3}-[0-9]{3}-[0-9]{4}$|^\+[0-9]{1,3}[0-9]{10}$/,
       'Please enter a valid phone number (10 digits, 123-456-7890, or +1XXXXXXXXXX)'
     ]
   },
@@ -141,7 +141,8 @@ const departmentSchema = new mongoose.Schema({
     },
     credits: {
       type: Number,
-      min: 0
+      min: 0,
+      max: 8
     },
     isActive: {
       type: Boolean,
@@ -238,21 +239,21 @@ departmentSchema.virtual('courseCount', {
 });
 
 // Pre-save middleware to update stats
-departmentSchema.pre('save', async function(next) {
+departmentSchema.pre('save', async function (next) {
   // If this is a new department or code/name changed, you might want to trigger stats update
   this.updatedAt = Date.now();
   next();
 });
 
 // Pre-remove middleware
-departmentSchema.pre('remove', async function(next) {
+departmentSchema.pre('remove', async function (next) {
   // Check if department has any active dependencies
   const User = mongoose.model('User');
   const Course = mongoose.model('Course');
-  
+
   const hasUsers = await User.exists({ department: this._id, isActive: true });
   const hasCourses = await Course.exists({ department: this._id, isActive: true });
-  
+
   if (hasUsers || hasCourses) {
     next(new Error('Cannot delete department with active users or courses'));
   }
@@ -264,11 +265,11 @@ departmentSchema.methods = {
   // Get current HOD
   async getCurrentHOD() {
     if (!this.headOfDepartment) return null;
-    
+
     const hod = await mongoose.model('User')
       .findById(this.headOfDepartment)
       .select('firstName lastName email profilePicture');
-    
+
     return {
       ...hod.toObject(),
       startDate: this.hodStartDate,
@@ -281,20 +282,20 @@ departmentSchema.methods = {
   async updateStats() {
     const User = mongoose.model('User');
     const Course = mongoose.model('Course');
-    
+
     const [studentCount, lecturerCount, courseCount] = await Promise.all([
       User.countDocuments({ department: this._id, role: 'student', isActive: true }),
       User.countDocuments({ department: this._id, role: 'lecturer', isActive: true }),
       Course.countDocuments({ department: this._id, isActive: true })
     ]);
-    
+
     this.stats = {
       totalStudents: studentCount,
       totalLecturers: lecturerCount,
       totalFaculty: lecturerCount, // Faculty includes lecturers
       totalCourses: courseCount
     };
-    
+
     return this.save();
   },
 
@@ -309,7 +310,7 @@ departmentSchema.statics = {
   // Get department statistics
   async getStats(filters = {}) {
     const match = { isActive: true, ...filters };
-    
+
     const stats = await this.aggregate([
       { $match: match },
       {

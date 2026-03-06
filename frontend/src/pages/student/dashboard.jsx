@@ -30,15 +30,28 @@ const StudentDashboard = () => {
   });
 
   useEffect(() => {
-    if (user?._id) {
+    if (user) {
       fetchDashboardData();
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
   const fetchDashboardData = async () => {
-    if (!user?._id) return;
+    if (!user?._id) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      const [subjectsRes, resultsRes, filesRes, timetablesRes, notificationsRes, unreadRes] = await Promise.allSettled([
+      const [
+        subjectsRes,
+        resultsRes,
+        filesRes,
+        timetablesRes,
+        notificationsRes,
+        unreadRes
+      ] = await Promise.allSettled([
         api.get('/api/subjects'),
         api.get(`/api/results/student/${user._id}`),
         api.get('/api/files'),
@@ -48,18 +61,42 @@ const StudentDashboard = () => {
       ]);
 
       setStats({
-        subjects: subjectsRes.status === 'fulfilled' ? subjectsRes.value.data.subjects || [] : [],
-        results: resultsRes.status === 'fulfilled' ? resultsRes.value.data.results || {} : {},
-        files: filesRes.status === 'fulfilled' ? (filesRes.value.data.files || []).slice(0, 5) : [],
-        timetables: timetablesRes.status === 'fulfilled' ? timetablesRes.value.data.timetables || [] : [],
-        notifications: notificationsRes.status === 'fulfilled' ? (notificationsRes.value.data.notifications || []).slice(0, 5) : [],
-        unreadCount: unreadRes.status === 'fulfilled' ? unreadRes.value.data.count || 0 : 0,
+        subjects:
+          subjectsRes.status === "fulfilled"
+            ? subjectsRes.value.data?.subjects || []
+            : [],
+
+        results:
+          resultsRes.status === "fulfilled"
+            ? resultsRes.value.data?.results || {}
+            : {},
+
+        files:
+          filesRes.status === "fulfilled"
+            ? (filesRes.value.data?.files || []).slice(0, 5)
+            : [],
+
+        timetables:
+          timetablesRes.status === "fulfilled"
+            ? timetablesRes.value.data?.timetables || []
+            : [],
+
+        notifications:
+          notificationsRes.status === "fulfilled"
+            ? (notificationsRes.value.data?.notifications || []).slice(0, 5)
+            : [],
+
+        unreadCount:
+          unreadRes.status === "fulfilled"
+            ? unreadRes.value.data?.count || 0
+            : 0,
       });
+
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
+      console.error("Dashboard fetch error:", error);
     }
+
+    setLoading(false);
   };
 
   const getPoorGradeSubjects = () => {
@@ -311,13 +348,26 @@ const StudentDashboard = () => {
                     <p className="font-medium text-gray-800 truncate">{file.originalName}</p>
                     <p className="text-sm text-gray-500">{file.subject?.name}</p>
                   </div>
-                  <a
-                    href={`${API_URL}/files/download/${file._id}`}
+                  <button
+                    onClick={async () => {
+                      try {
+                        const response = await api.get(`/api/files/download/${file._id}`, { responseType: 'blob' });
+                        const url = window.URL.createObjectURL(new Blob([response.data]));
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = file.originalName || 'download';
+                        document.body.appendChild(link);
+                        link.click();
+                        link.remove();
+                        window.URL.revokeObjectURL(url);
+                      } catch (e) {
+                        console.error('Download failed', e);
+                      }
+                    }}
                     className="ml-4 p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    download
                   >
                     <FiDownload className="h-5 w-5" />
-                  </a>
+                  </button>
                 </div>
               ))
             ) : (

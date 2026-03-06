@@ -1,7 +1,7 @@
 const User = require('../models/user');
 const Course = require('../models/course');
 const Result = require('../models/result');
-const Enrollment = require('../models/Enrollment');
+const Enrollment = require('../models/enrollment');
 const Timetable = require('../models/timetable');
 
 // @desc    Get dashboard stats based on user role
@@ -32,10 +32,10 @@ const getDashboardStats = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Server error',
-      error: error.message 
+      error: error.message
     });
   }
 };
@@ -85,10 +85,10 @@ const getUserStats = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching user stats:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Server error',
-      error: error.message 
+      error: error.message
     });
   }
 };
@@ -167,10 +167,10 @@ const getCourseStats = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching course stats:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Server error',
-      error: error.message 
+      error: error.message
     });
   }
 };
@@ -235,10 +235,10 @@ const getResultStats = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching result stats:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Server error',
-      error: error.message 
+      error: error.message
     });
   }
 };
@@ -291,10 +291,10 @@ const getSystemOverview = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching system overview:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Server error',
-      error: error.message 
+      error: error.message
     });
   }
 };
@@ -456,10 +456,10 @@ const createCustomReport = async (req, res) => {
     });
   } catch (error) {
     console.error('Error generating custom report:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Server error',
-      error: error.message 
+      error: error.message
     });
   }
 };
@@ -467,7 +467,7 @@ const createCustomReport = async (req, res) => {
 // Helper functions for custom reports
 const gener3t24NpUrJMNunMMASmhAM953bFGeLXzN7 = async (filters, dateRange) => {
   const matchStage = {};
-  
+
   if (dateRange?.start && dateRange?.end) {
     matchStage.publishedAt = {
       $gte: new Date(dateRange.start),
@@ -517,7 +517,7 @@ const gener3t24NpUrJMNunMMASmhAM953bFGeLXzN7 = async (filters, dateRange) => {
 
 const generateCoursePopularityReport = async (dateRange) => {
   const matchStage = {};
-  
+
   if (dateRange?.start && dateRange?.end) {
     matchStage.enrolledAt = {
       $gte: new Date(dateRange.start),
@@ -559,7 +559,7 @@ const generateCoursePopularityReport = async (dateRange) => {
 
 const generateGradeAnalysisReport = async (filters, dateRange) => {
   const matchStage = {};
-  
+
   if (dateRange?.start && dateRange?.end) {
     matchStage.publishedAt = {
       $gte: new Date(dateRange.start),

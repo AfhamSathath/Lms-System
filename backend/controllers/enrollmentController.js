@@ -1,4 +1,4 @@
-const Enrollment = require('../models/Enrollment');
+const Enrollment = require('../models/enrollment');
 const Course = require('../models/course');
 const User = require('../models/user');
 const Notification = require('../models/notification');
@@ -6,9 +6,9 @@ const Notification = require('../models/notification');
 // Helper functions
 const checkEnrollmentAccess = async (enrollment, user) => {
   if (!enrollment || !user) return false;
-  
+
   if (user.role === 'admin') return true;
-  
+
   if (user.role === 'student') {
     return enrollment.student?._id?.toString() === user.id;
   }
@@ -38,21 +38,21 @@ const isCourseLecturer = async (courseId, userId) => {
 
 const calculateAverageGrade = (enrollments) => {
   if (!Array.isArray(enrollments) || enrollments.length === 0) return '0.00';
-  
+
   const gradedEnrollments = enrollments.filter(e => e.gradePoints);
   if (gradedEnrollments.length === 0) return '0.00';
-  
+
   const sum = gradedEnrollments.reduce((acc, e) => acc + (e.gradePoints || 0), 0);
   return (sum / gradedEnrollments.length).toFixed(2);
 };
 
 const calculatePassRate = (enrollments) => {
   if (!Array.isArray(enrollments) || enrollments.length === 0) return '0.00';
-  
+
   const completed = enrollments.filter(e => e.enrollmentStatus === 'completed').length;
   const failed = enrollments.filter(e => e.enrollmentStatus === 'failed').length;
   const totalGraded = completed + failed;
-  
+
   if (totalGraded === 0) return '0.00';
   return ((completed / totalGraded) * 100).toFixed(2);
 };
@@ -60,11 +60,11 @@ const calculatePassRate = (enrollments) => {
 const calculateGradeDistribution = (enrollments) => {
   const distribution = {};
   const grades = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'E', 'F'];
-  
+
   grades.forEach(grade => {
     distribution[grade] = enrollments.filter(e => e.grade === grade).length;
   });
-  
+
   return distribution;
 };
 
@@ -73,10 +73,10 @@ const calculateGradeDistribution = (enrollments) => {
 // @access  Private (Admin, HOD, Dean, Lecturer)
 exports.getEnrollments = async (req, res, next) => {
   try {
-    const { 
-      student, 
-      course, 
-      academicYear, 
+    const {
+      student,
+      course,
+      academicYear,
       semester,
       enrollmentStatus,
       page = 1,
@@ -164,18 +164,18 @@ exports.getEnrollment = async (req, res, next) => {
       .populate('assessments.gradedBy', 'name');
 
     if (!enrollment) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Enrollment not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Enrollment not found'
       });
     }
 
     // Check access permissions
     const hasAccess = await checkEnrollmentAccess(enrollment, req.user);
     if (!hasAccess) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
       });
     }
 
@@ -196,29 +196,29 @@ exports.createEnrollment = async (req, res, next) => {
     const { student, course, academicYear, semester } = req.body;
 
     // Check if student exists and is a student
-    const studentUser = await User.findOne({ 
-      _id: student, 
+    const studentUser = await User.findOne({
+      _id: student,
       role: 'student',
-      isActive: true 
+      isActive: true
     });
 
     if (!studentUser) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Student not found or inactive' 
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found or inactive'
       });
     }
 
     // Check if course exists and is active
-    const courseData = await Course.findOne({ 
-      _id: course, 
-      isActive: true 
+    const courseData = await Course.findOne({
+      _id: course,
+      isActive: true
     });
 
     if (!courseData) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Course not found or inactive' 
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found or inactive'
       });
     }
 
@@ -231,9 +231,9 @@ exports.createEnrollment = async (req, res, next) => {
     });
 
     if (existingEnrollment) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Student is already enrolled in this course for the specified semester' 
+      return res.status(400).json({
+        success: false,
+        message: 'Student is already enrolled in this course for the specified semester'
       });
     }
 
@@ -246,9 +246,9 @@ exports.createEnrollment = async (req, res, next) => {
     });
 
     if (enrolledCount >= (courseData.maxStudents || Infinity)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Course has reached maximum capacity' 
+      return res.status(400).json({
+        success: false,
+        message: 'Course has reached maximum capacity'
       });
     }
 
@@ -309,28 +309,28 @@ exports.updateEnrollment = async (req, res, next) => {
     const enrollment = await Enrollment.findById(req.params.id);
 
     if (!enrollment) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Enrollment not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Enrollment not found'
       });
     }
 
     // Check permissions
-    const canUpdate = 
-      req.user.role === 'admin' || 
+    const canUpdate =
+      req.user.role === 'admin' ||
       req.user.role === 'registrar' ||
       (req.user.role === 'lecturer' && await isCourseLecturer(enrollment.course, req.user.id));
 
     if (!canUpdate) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. You cannot update this enrollment.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You cannot update this enrollment.'
       });
     }
 
     // Prevent updates to certain fields
     const allowedUpdates = [
-      'continuousAssessment', 'finalExam', 'attendance', 
+      'continuousAssessment', 'finalExam', 'attendance',
       'assessments', 'remarks', 'enrollmentStatus'
     ];
 
@@ -348,7 +348,7 @@ exports.updateEnrollment = async (req, res, next) => {
       updates,
       { new: true, runValidators: true }
     ).populate('student', 'name studentId email')
-     .populate('course', 'courseCode courseName');
+      .populate('course', 'courseCode courseName');
 
     // If grade was updated, notify student
     if (updates.continuousAssessment !== undefined || updates.finalExam !== undefined) {
@@ -385,17 +385,17 @@ exports.deleteEnrollment = async (req, res, next) => {
     const enrollment = await Enrollment.findById(req.params.id);
 
     if (!enrollment) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Enrollment not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Enrollment not found'
       });
     }
 
     // Only admin can delete enrollments
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. Only admin can delete enrollments.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only admin can delete enrollments.'
       });
     }
 
@@ -423,17 +423,17 @@ exports.bulkEnrollStudents = async (req, res, next) => {
     const { course, academicYear, semester, students } = req.body;
 
     if (!Array.isArray(students) || students.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please provide an array of student IDs' 
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide an array of student IDs'
       });
     }
 
     const courseData = await Course.findById(course);
     if (!courseData) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Course not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
       });
     }
 
@@ -447,10 +447,10 @@ exports.bulkEnrollStudents = async (req, res, next) => {
     for (const studentId of students) {
       try {
         // Check if student exists
-        const student = await User.findOne({ 
-          _id: studentId, 
+        const student = await User.findOne({
+          _id: studentId,
           role: 'student',
-          isActive: true 
+          isActive: true
         });
 
         if (!student) {
@@ -541,22 +541,22 @@ exports.updateGrades = async (req, res, next) => {
     const enrollment = await Enrollment.findById(req.params.id);
 
     if (!enrollment) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Enrollment not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Enrollment not found'
       });
     }
 
     // Check permissions
-    const canGrade = 
+    const canGrade =
       req.user.role === 'admin' ||
       req.user.role === 'hod' ||
       (req.user.role === 'lecturer' && await isCourseLecturer(enrollment.course, req.user.id));
 
     if (!canGrade) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. You cannot grade this enrollment.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You cannot grade this enrollment.'
       });
     }
 
@@ -579,7 +579,7 @@ exports.updateGrades = async (req, res, next) => {
           assessment.gradedBy = req.user.id;
           assessment.gradedDate = new Date();
           assessment.graded = true;
-          
+
           enrollment.assessments[existingIndex] = {
             ...enrollment.assessments[existingIndex].toObject(),
             ...assessment
@@ -640,31 +640,31 @@ exports.updateAttendance = async (req, res, next) => {
     const { attendance } = req.body;
 
     if (!Array.isArray(attendance) || attendance.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please provide attendance records' 
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide attendance records'
       });
     }
 
     const enrollment = await Enrollment.findById(req.params.id);
 
     if (!enrollment) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Enrollment not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Enrollment not found'
       });
     }
 
     // Check permissions
-    const canUpdateAttendance = 
+    const canUpdateAttendance =
       req.user.role === 'admin' ||
       req.user.role === 'hod' ||
       (req.user.role === 'lecturer' && await isCourseLecturer(enrollment.course, req.user.id));
 
     if (!canUpdateAttendance) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. You cannot update attendance for this enrollment.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You cannot update attendance for this enrollment.'
       });
     }
 
@@ -726,17 +726,17 @@ exports.getStudentEnrollments = async (req, res, next) => {
 
     // Check access
     if (req.user.role === 'student' && req.user.id !== studentId) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. You can only view your own enrollments.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only view your own enrollments.'
       });
     }
 
     const student = await User.findById(studentId);
     if (!student || student.role !== 'student') {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Student not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found'
       });
     }
 
@@ -797,24 +797,24 @@ exports.getCourseEnrollments = async (req, res, next) => {
 
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Course not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
       });
     }
 
     // Check access
     const isLecturer = course.lecturers?.some(l => l?.toString() === req.user.id);
-    const hasAccess = 
+    const hasAccess =
       req.user.role === 'admin' ||
       req.user.role === 'hod' ||
       req.user.role === 'dean' ||
       isLecturer;
 
     if (!hasAccess) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. You cannot view enrollments for this course.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You cannot view enrollments for this course.'
       });
     }
 
@@ -873,18 +873,18 @@ exports.generateGradeSheet = async (req, res, next) => {
 
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Course not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
       });
     }
 
     // Check access
     const isLecturer = course.lecturers?.some(l => l?.toString() === req.user.id);
     if (!['admin', 'hod', 'dean'].includes(req.user.role) && !isLecturer) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. Only lecturers of this course can generate grade sheets.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only lecturers of this course can generate grade sheets.'
       });
     }
 
@@ -893,8 +893,8 @@ exports.generateGradeSheet = async (req, res, next) => {
       academicYear,
       semester: parseInt(semester)
     })
-    .populate('student', 'name studentId registrationNumber')
-    .sort('student.studentId');
+      .populate('student', 'name studentId registrationNumber')
+      .sort('student.studentId');
 
     // Generate grade sheet data
     const gradeSheet = {
@@ -945,22 +945,22 @@ exports.withdrawStudent = async (req, res, next) => {
     const enrollment = await Enrollment.findById(req.params.id);
 
     if (!enrollment) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Enrollment not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Enrollment not found'
       });
     }
 
     // Check permissions
-    const canWithdraw = 
+    const canWithdraw =
       req.user.role === 'admin' ||
       req.user.role === 'registrar' ||
       (req.user.role === 'student' && enrollment.student?.toString() === req.user.id);
 
     if (!canWithdraw) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. You cannot withdraw from this course.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You cannot withdraw from this course.'
       });
     }
 
@@ -969,11 +969,11 @@ exports.withdrawStudent = async (req, res, next) => {
       const enrollmentDate = new Date(enrollment.enrollmentDate || enrollment.createdAt);
       const now = new Date();
       const daysDiff = Math.floor((now - enrollmentDate) / (1000 * 60 * 60 * 24));
-      
+
       if (daysDiff > 14) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Withdrawal period has expired. Please contact the registrar.' 
+        return res.status(400).json({
+          success: false,
+          message: 'Withdrawal period has expired. Please contact the registrar.'
         });
       }
     }

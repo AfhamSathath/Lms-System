@@ -17,7 +17,7 @@ const {
   getDepartmentStats,
   getYearlyStats,
   bulkUploadResults,
-  
+
 } = resultcontroller;
 
 // ================= MULTER SETUP =================
@@ -31,7 +31,7 @@ const upload = multer({
 router.use(protect);
 
 // ================= STUDENT ROUTES =================
-router.get('/student/:studentId', getStudentResults);
+router.get('/student/:id', protect, getStudentResults);
 router.get('/transcript/:studentId', getTranscript);
 
 // ================= ADMIN STATISTICS ROUTES =================

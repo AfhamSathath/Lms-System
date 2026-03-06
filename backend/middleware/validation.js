@@ -19,7 +19,7 @@ exports.validateUser = [
 exports.validateCourse = [
   body('courseCode').notEmpty().withMessage('Course code is required').trim().toUpperCase(),
   body('courseName').notEmpty().withMessage('Course name is required').trim(),
-  body('credits').isInt({ min: 1, max: 6 }).withMessage('Credits must be between 1 and 6'),
+  body('credits').isInt({ min: 1, max: 8 }).withMessage('Credits must be between 1 and 8'),
   body('department').notEmpty().withMessage('Department is required'),
   body('level').isIn(['100', '200', '300', '400', '500', '600', '700']).withMessage('Invalid level'),
   body('semester').isIn([1, 2]).withMessage('Semester must be 1 or 2'),

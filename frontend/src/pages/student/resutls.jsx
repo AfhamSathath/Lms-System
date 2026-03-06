@@ -11,19 +11,24 @@ const StudentResults = () => {
   const [expandedSemesters, setExpandedSemesters] = useState({});
 
   useEffect(() => {
-    if (user?._id) {
+    if (user) {
       fetchResults();
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
   const fetchResults = async () => {
-    if (!user?._id) return;
+    if (!user?._id) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await api.get(`/results/student/${user._id}`);
-      setResults(response.data.results);
-      
-      // Auto-expand the latest semester
-      const semesters = Object.keys(response.data.results);
+      const response = await api.get(`/api/results/student/${user._id}`);
+      setResults(response.data?.results || {});
+
+      const semesters = Object.keys(response.data?.results || {});
       if (semesters.length > 0) {
         const latest = Math.max(...semesters);
         setExpandedSemesters({ [latest]: true });
@@ -64,7 +69,7 @@ const StudentResults = () => {
   const calculateCGPA = () => {
     let totalCredits = 0;
     let totalGradePoints = 0;
-    
+
     Object.keys(results).forEach(semester => {
       results[semester]?.subjects?.forEach(result => {
         totalCredits += result.subject.credits;
@@ -226,11 +231,10 @@ const StudentResults = () => {
                               {result.gradePoint}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                result.status === 'pass' 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-red-100 text-red-800'
-                              }`}>
+                              <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${result.status === 'pass'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                                }`}>
                                 {result.status.toUpperCase()}
                               </span>
                             </td>

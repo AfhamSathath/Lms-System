@@ -17,7 +17,7 @@ const subjectSchema = new mongoose.Schema({
     type: Number,
     required: [true, 'Credits are required'],
     min: [1, 'Credits must be at least 1'],
-    max: [5, 'Credits cannot exceed 5'],
+    max: [8, 'Credits cannot exceed 8'],
   },
   year: {
     type: String,
@@ -53,7 +53,7 @@ const subjectSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     validate: {
-      validator: async function(v) {
+      validator: async function (v) {
         if (!v) return true;
         const user = await mongoose.model('User').findById(v);
         return user && user.role === 'lecturer';
@@ -80,7 +80,7 @@ const subjectSchema = new mongoose.Schema({
 });
 
 // Helper function to get semester number (1-8)
-subjectSchema.virtual('semesterNumber').get(function() {
+subjectSchema.virtual('semesterNumber').get(function () {
   const yearMap = {
     '1st Year': 1,
     '2nd Year': 2,
