@@ -18,21 +18,53 @@ const StudentResults = () => {
     }
   }, [user]);
 
+  const getYearLabel = (num) => {
+    const map = {
+      1: '1st Year',
+      2: '2nd Year',
+      3: '3rd Year',
+      4: '4th Year',
+      5: '5th Year'
+    };
+    return map[num] || num;
+  };
+
   const fetchResults = async () => {
-    if (!user?._id) {
+    // make sure we use the id field that is always populated by auth
+    const studentId = user?.id || user?._id;
+    if (!studentId) {
       setLoading(false);
       return;
     }
 
     try {
-      const response = await api.get(`/api/results/student/${user._id}`);
-      setResults(response.data?.results || {});
+      const response = await api.get(`/api/results/student/${studentId}`);
+      const allResults = (response?.data?.results && typeof response.data.results === 'object')
+        ? response.data.results
+        : {};
+      console.log('raw results from API', allResults);
 
-      const semesters = Object.keys(response.data?.results || {});
-      if (semesters.length > 0) {
-        const latest = Math.max(...semesters);
-        setExpandedSemesters({ [latest]: true });
+      // attempt to filter to only the student's current year/semester
+      const yrRaw = user?.yearOfStudy || user?.year;
+      const sem = user?.semester;
+      const assignedYear = typeof yrRaw === 'number' ? getYearLabel(yrRaw) : yrRaw;
+      let filteredResults = {};
+      let assignedKey;
+
+      if (assignedYear && sem != null) {
+        assignedKey = `${assignedYear}-S${sem}`;
+        if (allResults[assignedKey]) {
+          filteredResults = { [assignedKey]: allResults[assignedKey] };
+          setExpandedSemesters({ [assignedKey]: true });
+        } else {
+          console.warn(`no results found for key ${assignedKey}, falling back to all results`);
+          filteredResults = allResults;
+        }
+      } else {
+        filteredResults = allResults;
       }
+
+      setResults(filteredResults);
     } catch (error) {
       console.error('Error fetching results:', error);
     } finally {
@@ -111,7 +143,7 @@ const StudentResults = () => {
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl shadow-xl p-6 mb-8 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-lg opacity-90">Cumulative GPA (CGPA)</p>
+                  <p className="text-lg opacity-90">Cumulative GPA (CGPA)</p>
             <p className="text-4xl font-bold mt-2">{calculateCGPA()}</p>
           </div>
           <FiAward className="h-16 w-16 opacity-50" />
@@ -145,7 +177,18 @@ const StudentResults = () => {
       {hasResults ? (
         <div className="space-y-4">
           {Object.keys(results)
-            .sort((a, b) => b - a)
+            .sort((a, b) => {
+              // keys are like "1st Year-S1"; sort by year then semester descending
+              const yearOrder = { '1st Year': 1, '2nd Year': 2, '3rd Year': 3, '4th Year': 4, '5th Year': 5 };
+              const [aYear, aSemStr] = a.split('-S');
+              const [bYear, bSemStr] = b.split('-S');
+              const aYearNum = yearOrder[aYear] || 0;
+              const bYearNum = yearOrder[bYear] || 0;
+              const aSem = parseInt(aSemStr) || 0;
+              const bSem = parseInt(bSemStr) || 0;
+              if (aYearNum !== bYearNum) return bYearNum - aYearNum;
+              return bSem - aSem;
+            })
             .map(semester => (
               <div key={semester} className="bg-white rounded-xl shadow-lg overflow-hidden">
                 {/* Semester Header */}

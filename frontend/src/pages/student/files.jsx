@@ -24,17 +24,21 @@ const StudentFiles = () => {
 
   const fetchData = async () => {
     try {
+      // fetch all files the student can access; backend handles public/enrollment
       const [filesRes, subjectsRes] = await Promise.all([
         api.get('/api/files'),
         api.get('/api/subjects')
       ]);
-      setFiles(filesRes.data.files || []);
-      setFilteredFiles(filesRes.data.files || []);
-      setSubjects(subjectsRes.data.subjects || []);
+      const filelist = (filesRes?.data?.files && Array.isArray(filesRes.data.files)) ? filesRes.data.files : [];
+      const sublist = (subjectsRes?.data?.subjects && Array.isArray(subjectsRes.data.subjects)) ? subjectsRes.data.subjects : [];
+      setFiles(filelist);
+      setFilteredFiles(filelist);
+      setSubjects(sublist);
     } catch (error) {
       console.error('Error fetching data:', error);
       setFiles([]);
       setFilteredFiles([]);
+      setSubjects([]);
     } finally {
       setLoading(false);
     }
@@ -102,8 +106,11 @@ const StudentFiles = () => {
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex-1 relative">
+              <label htmlFor="file-search" className="sr-only">Search files</label>
               <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
+                id="file-search"
+                name="file-search"
                 type="text"
                 placeholder="Search files by name or subject..."
                 value={searchTerm}
@@ -112,8 +119,11 @@ const StudentFiles = () => {
               />
             </div>
             <div className="relative">
+              <label htmlFor="subject-filter" className="sr-only">Filter by subject</label>
               <FiFilter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <select
+                id="subject-filter"
+                name="subject-filter"
                 value={selectedSubject}
                 onChange={(e) => setSelectedSubject(e.target.value)}
                 className="w-full pl-10 pr-8 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"

@@ -201,11 +201,13 @@ exports.deleteSubject = async (req, res, next) => {
 // @access  Private
 exports.getSubjectsByYearAndSemester = async (req, res, next) => {
   try {
-    const { year, semester } = req.params;
+    let { year, semester } = req.params;
+    year = parseInt(year);
+    semester = parseInt(semester);
 
     const query = {
       year,
-      semester: parseInt(semester),
+      semester,
       isActive: true,
     };
 
@@ -236,8 +238,9 @@ exports.getSubjectsByYearAndSemester = async (req, res, next) => {
 // @access  Private
 exports.getSubjectsByYear = async (req, res, next) => {
   try {
+    const year = parseInt(req.params.year);
     const query = {
-      year: req.params.year,
+      year,
       isActive: true,
     };
 

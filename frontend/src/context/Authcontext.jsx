@@ -37,7 +37,13 @@ export const AuthProvider = ({ children }) => {
   const fetchUser = async () => {
     try {
       const response = await api.get('/api/auth/me');
-      setUser(response.data.user);
+      const fetchedUser = response.data.user;
+      // make sure both id and _id are available so components can use either
+      if (fetchedUser) {
+        if (fetchedUser.id && !fetchedUser._id) fetchedUser._id = fetchedUser.id;
+        if (fetchedUser._id && !fetchedUser.id) fetchedUser.id = fetchedUser._id;
+      }
+      setUser(fetchedUser);
     } catch (error) {
       console.error('Error fetching user:', error);
       logout();
@@ -54,10 +60,9 @@ export const AuthProvider = ({ children }) => {
       });
 
       let { token, user } = response.data;
-      // Ensure user has an id property for backward compatibility
-      if (user._id && !user.id) {
-        user.id = user._id;
-      }
+      // ensure both id and _id are defined so components can use either field
+      if (user._id && !user.id) user.id = user._id;
+      if (user.id && !user._id) user._id = user.id;
 
       localStorage.setItem('token', token);
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;

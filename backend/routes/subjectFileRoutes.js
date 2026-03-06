@@ -10,7 +10,7 @@ const {
   getCurriculumFiles,
   getFileStatistics,
   getAllFiles
-} = require('../controllers/subjectFileController');
+} = subjectFileController = require('../controllers/subjectFileController');
 const { protect, authorize } = require('../middleware/auth');
 const { upload } = require('../middleware/upload');
 

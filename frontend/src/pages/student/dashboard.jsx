@@ -38,12 +38,14 @@ const StudentDashboard = () => {
   }, [user]);
 
   const fetchDashboardData = async () => {
-    if (!user?._id) {
+    const studentId = user?.id || user?._id;
+    if (!studentId) {
       setLoading(false);
       return;
     }
 
     try {
+      // fetch everything the student can access in parallel
       const [
         subjectsRes,
         resultsRes,
@@ -53,50 +55,67 @@ const StudentDashboard = () => {
         unreadRes
       ] = await Promise.allSettled([
         api.get('/api/subjects'),
-        api.get(`/api/results/student/${user._id}`),
+        api.get(`/api/results/student/${studentId}`),
         api.get('/api/files'),
         api.get('/api/timetables/upcoming'),
         api.get('/api/notifications'),
         api.get('/api/notifications/unread-count')
       ]);
 
+      // safe extraction from each response
+      let subjects = [];
+      if (subjectsRes.status === "fulfilled" && subjectsRes.value?.data) {
+        subjects = Array.isArray(subjectsRes.value.data.subjects) ? subjectsRes.value.data.subjects : [];
+      }
+
+      let results = {};
+      if (resultsRes.status === "fulfilled" && resultsRes.value?.data) {
+        results = resultsRes.value.data.results || {};
+      }
+
+      let files = [];
+      if (filesRes.status === "fulfilled" && filesRes.value?.data) {
+        files = Array.isArray(filesRes.value.data.files) ? filesRes.value.data.files.slice(0, 5) : [];
+      }
+
+      let timetables = [];
+      if (timetablesRes.status === "fulfilled" && timetablesRes.value?.data) {
+        timetables = Array.isArray(timetablesRes.value.data.timetables) ? timetablesRes.value.data.timetables : [];
+      }
+
+      let notifications = [];
+      if (notificationsRes.status === "fulfilled" && notificationsRes.value?.data) {
+        notifications = Array.isArray(notificationsRes.value.data.notifications) ? notificationsRes.value.data.notifications.slice(0, 5) : [];
+      }
+
+      let unreadCount = 0;
+      if (unreadRes.status === "fulfilled" && unreadRes.value?.data) {
+        unreadCount = unreadRes.value.data.count || 0;
+      }
+
       setStats({
-        subjects:
-          subjectsRes.status === "fulfilled"
-            ? subjectsRes.value.data?.subjects || []
-            : [],
-
-        results:
-          resultsRes.status === "fulfilled"
-            ? resultsRes.value.data?.results || {}
-            : {},
-
-        files:
-          filesRes.status === "fulfilled"
-            ? (filesRes.value.data?.files || []).slice(0, 5)
-            : [],
-
-        timetables:
-          timetablesRes.status === "fulfilled"
-            ? timetablesRes.value.data?.timetables || []
-            : [],
-
-        notifications:
-          notificationsRes.status === "fulfilled"
-            ? (notificationsRes.value.data?.notifications || []).slice(0, 5)
-            : [],
-
-        unreadCount:
-          unreadRes.status === "fulfilled"
-            ? unreadRes.value.data?.count || 0
-            : 0,
+        subjects,
+        results,
+        files,
+        timetables,
+        notifications,
+        unreadCount,
       });
 
     } catch (error) {
       console.error("Dashboard fetch error:", error);
+      // on error, set defaults
+      setStats({
+        subjects: [],
+        results: {},
+        files: [],
+        timetables: [],
+        notifications: [],
+        unreadCount: 0,
+      });
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const getPoorGradeSubjects = () => {
@@ -116,8 +135,7 @@ const StudentDashboard = () => {
     let totalGradePoints = 0;
 
     Object.keys(stats.results).forEach(semester => {
-      const sem = stats.results[semester];
-      sem?.subjects?.forEach(result => {
+      stats.results[semester]?.subjects?.forEach(result => {
         totalCredits += result.subject.credits;
         totalGradePoints += result.subject.credits * result.gradePoint;
       });
@@ -222,9 +240,9 @@ const StudentDashboard = () => {
             </div>
           </div>
           <div className="mt-4">
-            <button className="text-sm text-red-600 hover:text-red-800">
+            <Link to="/student/notifications" className="text-sm text-red-600 hover:text-red-800">
               View all →
-            </button>
+            </Link>
           </div>
         </div>
       </div>

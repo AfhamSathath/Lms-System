@@ -29,7 +29,7 @@ import Landing from './pages/home/landing';
 // Student Pages
 import StudentDashboard from './pages/student/dashboard';
 import StudentSubjects from './pages/student/subjects';
-import StudentResults from './pages/student/resutls';
+import StudentResults from './pages/student/results';
 import StudentFiles from './pages/student/files';
 import StudentProfile from './pages/student/profile';
 import StudentTimetable from './pages/student/timetable';

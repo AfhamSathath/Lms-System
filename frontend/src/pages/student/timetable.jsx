@@ -11,10 +11,15 @@ const StudentTimetable = () => {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const res = await api.get('/timetables/upcoming');
-        setTimetables(res.data.timetables);
+        const res = await api.get('/api/timetables/upcoming');
+        if (res?.data?.timetables && Array.isArray(res.data.timetables)) {
+          setTimetables(res.data.timetables);
+        } else {
+          setTimetables([]);
+        }
       } catch (err) {
-        console.error(err);
+        console.error('Error fetching timetables:', err);
+        setTimetables([]);
       } finally {
         setLoading(false);
       }

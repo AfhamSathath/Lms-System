@@ -1,6 +1,6 @@
 const File = require('../models/file');
 const Course = require('../models/course');
-const Enrollment = require('../models/enrollment');
+const Enrollment = require('../models/Enrollment');
 const fs = require('fs');
 
 /* =====================================================
@@ -137,8 +137,30 @@ exports.getFiles = async (req, res, next) => {
   try {
     let query = {};
 
+    // allow filtering by academic year / semester
+    if (req.query.year) {
+      const y = parseInt(req.query.year);
+      if (!isNaN(y)) query.academicYear = y;
+    }
+    if (req.query.semester) {
+      const s = parseInt(req.query.semester);
+      if (!isNaN(s)) query.semester = s;
+    }
+
     if (req.user.role === 'student') {
-      query.isPublic = true;
+      // restrict students to public files OR files belonging to courses they
+      // are enrolled in (so they can access private materials for their
+      // subjects).
+      const enrolled = await Enrollment.find({
+        student: req.user.id,
+        enrollmentStatus: 'enrolled'
+      }).select('course');
+      const courseIds = enrolled.map(e => e.course);
+
+      query.$or = [{ isPublic: true }];
+      if (courseIds.length) {
+        query.$or.push({ subject: { $in: courseIds } });
+      }
     }
 
     const files = await File.find(query)

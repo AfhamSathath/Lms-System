@@ -13,14 +13,33 @@ const StudentSubjects = () => {
 
   useEffect(() => {
     fetchSubjects();
-  }, [selectedSemester]);
+  }, [selectedSemester, user]);
+
+  // keep the selected semester in sync if the user object updates
+  useEffect(() => {
+    if (user?.semester) {
+      setSelectedSemester(user.semester);
+    }
+  }, [user]);
+
+  // dashboard state and related logic were previously present here but
+  // never used. the entire section has been removed to avoid unused
+  // variable warnings and stray syntax errors.
 
   const fetchSubjects = async () => {
+    setLoading(true);
     try {
-      const response = await api.get(`/api/subjects/semester/${selectedSemester}`);
-      setSubjects(response.data.subjects);
+      // load all subjects, then filter by selected semester (and department)
+      const response = await api.get('/api/subjects');
+      let all = (response?.data?.subjects && Array.isArray(response.data.subjects)) ? response.data.subjects : [];
+      all = all.filter(sub => sub.semester === selectedSemester);
+      if (user?.department) {
+        all = all.filter(sub => sub.department === user.department);
+      }
+      setSubjects(all);
     } catch (error) {
       console.error('Error fetching subjects:', error);
+      setSubjects([]); // fallback
     } finally {
       setLoading(false);
     }
@@ -55,11 +74,10 @@ const StudentSubjects = () => {
             <button
               key={sem}
               onClick={() => setSelectedSemester(sem)}
-              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                selectedSemester === sem
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${selectedSemester === sem
+                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               Semester {sem}
             </button>
@@ -70,8 +88,11 @@ const StudentSubjects = () => {
       {/* Search Bar */}
       <div className="mb-6">
         <div className="relative">
+          <label htmlFor="subject-search" className="sr-only">Search subjects</label>
           <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
+            id="subject-search"
+            name="subject-search"
             type="text"
             placeholder="Search subjects by name or code..."
             value={searchTerm}

@@ -351,7 +351,8 @@ const AdminUsers = () => {
     }
 
     try {
-      await api.put(`api/users/${selectedUser._id}`, updateData);
+      const userId = selectedUser?.id || selectedUser?._id;
+      await api.put(`api/users/${userId}`, updateData);
       toast.success('User updated successfully');
       setShowEditModal(false);
       setSelectedUser(null);
@@ -992,7 +993,7 @@ const AdminUsers = () => {
               openEditModal(selectedUser);
             }}
             onToggleStatus={() => {
-              handleToggleStatus(selectedUser._id, selectedUser.isActive);
+              handleToggleStatus(selectedUser?.id || selectedUser?._id, selectedUser.isActive);
               setShowViewModal(false);
             }}
             onClose={() => setShowViewModal(false)}
